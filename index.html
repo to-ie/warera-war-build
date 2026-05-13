@@ -138,6 +138,7 @@
     background: var(--surface-2);
     border-radius: 4px;
     margin-right: 0.35rem;
+    margin-bottom: 0.2rem;
     font-size: 0.8rem;
   }
   .pill .mono { font-family: var(--mono); }
@@ -177,35 +178,49 @@
 
   .stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
     gap: 0.5rem;
     margin-bottom: 1.1rem;
   }
   .stat {
     background: var(--surface-2);
     border-radius: 6px;
-    padding: 0.5rem 0.55rem;
-    text-align: center;
+    padding: 0.55rem 0.7rem;
+    text-align: left;
   }
   .stat-label {
     display: block;
     color: var(--dim);
     font-size: 0.74rem;
     margin-bottom: 0.25rem;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 0.95rem;
   }
 
-  /* COLLAPSIBLE "CURRENT STATE" SECTION */
+  /* COLLAPSIBLE "CURRENT STATE" SECTION — caret on left for scanability */
   .state-section { margin: 0; }
   .state-section > summary {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 0.6rem;
     cursor: pointer;
     padding: 0.5rem 0 0.85rem;
     list-style: none;
     user-select: none;
   }
   .state-section > summary::-webkit-details-marker { display: none; }
+  .state-section > summary > .caret {
+    color: var(--dim);
+    transition: transform 0.2s;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    display: inline-block;
+  }
   .state-section > summary > h2 {
     margin: 0;
     font-size: 1.05rem;
@@ -217,18 +232,8 @@
     font-size: 0.85rem;
     margin-left: 0.5rem;
   }
-  .state-section > summary > .caret {
-    color: var(--dim);
-    transition: transform 0.2s;
-    font-size: 0.85rem;
-  }
   .state-section:not([open]) > summary > .caret {
     transform: rotate(-90deg);
-  }
-  .stat-value {
-    font-family: var(--mono);
-    font-weight: 500;
-    font-size: 0.95rem;
   }
 
   .section { margin-top: 1rem; }
@@ -250,18 +255,22 @@
   .skill {
     display: flex;
     justify-content: space-between;
-    padding: 0.35rem 0.55rem;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.6rem;
     background: var(--surface-2);
     border-radius: 4px;
   }
   .skill-name { color: var(--dim); }
-  .skill-value { font-family: var(--mono); font-weight: 500; }
-  .skill .sub {
-    color: var(--dimmer);
-    font-size: 0.78rem;
-    margin-left: 0.4rem;
+  .skill-value {
+    font-family: var(--mono);
+    font-weight: 500;
+    text-align: right;
   }
+  .skill-value .sub { color: var(--dimmer); font-weight: 400; }
+  .skill-value .total { color: var(--text); }
 
+  /* TABLES */
   table.list {
     width: 100%;
     border-collapse: collapse;
@@ -280,7 +289,10 @@
     letter-spacing: 0.04em;
   }
   table.list td.mono { font-family: var(--mono); }
-  table.list td.num { text-align: right; font-family: var(--mono); }
+  /* Numeric columns: right-align both data cells AND their headers */
+  table.list td.num,
+  table.list th.num { text-align: right; font-family: var(--mono); }
+  table.list th.num { font-family: inherit; }
   table.list tr:last-child td { border-bottom: 0; }
   table.list tr.empty td { color: var(--dimmer); font-style: italic; }
 
@@ -293,8 +305,7 @@
   .hidden { display: none !important; }
   .muted { color: var(--dim); }
 
-  /* INFO TOOLTIP — small (?) button with hover/focus-revealed bubble.
-     Works on touch devices: tap focuses the button which triggers :focus. */
+  /* INFO TOOLTIP */
   .info-btn {
     display: inline-flex;
     align-items: center;
@@ -315,8 +326,7 @@
     font-family: inherit;
     line-height: 1;
   }
-  .info-btn:hover,
-  .info-btn:focus {
+  .info-btn:hover, .info-btn:focus {
     outline: none;
     color: var(--accent);
     border-color: var(--accent);
@@ -343,8 +353,7 @@
     z-index: 10;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
-  .info-btn:hover::after,
-  .info-btn:focus::after { opacity: 1; }
+  .info-btn:hover::after, .info-btn:focus::after { opacity: 1; }
 
   details.debug {
     margin-top: 1rem;
@@ -353,11 +362,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
   }
-  details.debug summary {
-    cursor: pointer;
-    font-size: 0.8rem;
-    color: var(--dim);
-  }
+  details.debug summary { cursor: pointer; font-size: 0.8rem; color: var(--dim); }
   details.debug pre {
     margin: 0.6rem 0 0;
     overflow: auto;
@@ -380,6 +385,25 @@
   footer a { color: var(--accent); text-decoration: none; }
   footer a:hover { text-decoration: underline; }
   footer .sep { margin: 0 0.5rem; color: var(--border-strong); }
+
+  /* MOBILE */
+  @media (max-width: 600px) {
+    body { font-size: 14px; }
+    main { padding: 1rem; }
+    .topbar-inner { padding: 0.75rem 1rem; }
+    .card { padding: 0.9rem 1rem; }
+    .stats { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 0.4rem; }
+    .stat { padding: 0.45rem 0.55rem; }
+    .stat-label { font-size: 0.7rem; }
+    .stat-value { font-size: 0.9rem; }
+    .skills { font-size: 0.8rem; }
+    .skill { padding: 0.4rem 0.5rem; }
+    table.list { font-size: 0.78rem; }
+    table.list th, table.list td { padding: 0.35rem 0.4rem; }
+    .player-head { padding: 0.85rem 1rem; }
+    .player-name { font-size: 1.1rem; }
+    .info-btn::after { width: 200px; left: auto; right: 0; }
+  }
 </style>
 </head>
 <body>
@@ -411,8 +435,8 @@
 
     <details class="state-section" open>
       <summary>
-        <h2>Your current state <span class="sub">snapshot only — no action needed</span></h2>
         <span class="caret">▾</span>
+        <h2>Your current state <span class="sub">snapshot only — no action needed</span></h2>
       </summary>
       <div class="grid">
         <div class="card">
@@ -486,11 +510,9 @@ function flag(code) {
 
 /* ═══════════════════════════════════════════════════════════════════
  *  TRPC CLIENT
- *
  *  Warera's tRPC server uses BARE input on the URL: `?input=<params>`
  *  (no batch wrapper, no superjson `{json:...}` wrapper). Response can
- *  be a single object or a batched array depending on the endpoint, so
- *  we unwrap defensively.
+ *  be a single object or batched array; we unwrap defensively.
  * ═══════════════════════════════════════════════════════════════════ */
 async function trpc(endpoint, params = {}) {
   const input = encodeURIComponent(JSON.stringify(params));
@@ -509,19 +531,13 @@ async function trpc(endpoint, params = {}) {
 /* ═══════════════════════════════════════════════════════════════════
  *  GAME CONSTANTS
  *  Eco bases verified against toie level-18 numbers from the API.
- *  Server returns pre-computed `.total` for each stat, so we mostly
- *  just read those for display; bases/gains used only for projecting
- *  hypothetical builds (future work).
  * ═══════════════════════════════════════════════════════════════════ */
 const ECO_BASE = { energy: 30, entrepreneurship: 30, production: 10, companies: 2, management: 4 };
 const ECO_GAIN = { energy: 10, entrepreneurship: 5, production: 3, companies: 1, management: 2 };
 const FIGHT_KEYS = ['attack','precision','criticalChance','criticalDamages','armor','dodge','health','lootChance','hunger'];
 const ECO_KEYS = ['energy','entrepreneurship','production','companies','management'];
 
-function pointsForLevel(level) {
-  // progressive cost: level N costs 1+2+...+N total
-  return (level * (level + 1)) / 2;
-}
+function pointsForLevel(level) { return (level * (level + 1)) / 2; }
 function pointsSpent(levels, keys) {
   return keys.reduce((s, k) => s + pointsForLevel(levels[k] || 0), 0);
 }
@@ -532,9 +548,7 @@ function pointsSpent(levels, keys) {
 async function resolveUserId(input) {
   const t = input.trim();
   if (!t) return null;
-  // direct mongo id
   if (/^[a-f0-9]{24}$/i.test(t)) return t;
-  // search — response shape: { userIds: [...], muIds: [...], countryIds: [...], ... }
   const r = await trpc('search.searchAnything', { searchText: t });
   const userIds = r?.userIds || [];
   if (!userIds.length) return null;
@@ -542,15 +556,12 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  // First wave: needs only userId
   const [user, inventory, companyList] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
   ]);
 
-  // Second wave: companies need IDs from companyList; country/mu need
-  // IDs from user. Fan out in one parallel batch.
   const u = user.status === 'fulfilled' ? user.value : null;
   const ids = companyList.status === 'fulfilled' ? (companyList.value?.items || []) : [];
 
@@ -581,11 +592,6 @@ async function loadPlayer(userId) {
 
 /* ═══════════════════════════════════════════════════════════════════
  *  EXTRACTION
- *
- *  user.skills[name] has shape:
- *    { level, value, weapon, equipment, total, totalAfterSoftCap, ... }
- *  We pull `.level` for the allocation table and `.total` (or
- *  `.totalAfterSoftCap` for armor/dodge) for the derived-stats grid.
  * ═══════════════════════════════════════════════════════════════════ */
 function extractPlayer(data) {
   const u = data.user || {};
@@ -664,7 +670,6 @@ function extractCompanies(comps) {
 
 /* ═══════════════════════════════════════════════════════════════════
  *  ECO MATH
- *  formulas from TheGroxEmpire/warera-eco-simulator README
  * ═══════════════════════════════════════════════════════════════════ */
 function actionsPerDay(bar, usagePct = 1) {
   return Math.floor(bar / 10) * 2.4 * usagePct;
@@ -692,7 +697,7 @@ function renderPlayer(data) {
   const muName = data.mu?.name;
   if (muName) meta.push(`<span class="pill">${escapeHtml(muName)}</span>`);
   if (p.militaryRank != null) {
-    meta.push(`<span class="pill">MR <span class="mono">${p.militaryRank}</span></span>`);
+    meta.push(`<span class="pill">Rank <span class="mono">${p.militaryRank}</span></span>`);
   }
   $('#player-meta').innerHTML = meta.join(' ');
 
@@ -753,7 +758,7 @@ function renderCombat(p, data) {
         ${skillRow('🛡️ Armor', p.levels.armor)}
         ${skillRow('💨 Dodge', p.levels.dodge)}
         ${skillRow('❤️ Health', p.levels.health)}
-        ${skillRow('💼 Loot', p.levels.lootChance)}
+        ${skillRow('💼 Loot chance', p.levels.lootChance)}
         ${skillRow('🍔 Hunger', p.levels.hunger)}
       </div>
     </div>
@@ -770,9 +775,6 @@ function skillRow(label, value) {
   return `<div class="skill"><span class="skill-name">${label}</span><span class="skill-value">${value}</span></div>`;
 }
 
-/* Equipment table: each slot maps to which stats matter. We read
- * `slot.skills.{statKey}` from the API and display the value with a
- * short label (atk, cc, cd, arm, ddg, prc). */
 const STAT_LABELS = {
   attack: 'attack',
   criticalChance: 'crit chance',
@@ -804,12 +806,12 @@ function equipmentTable(eq) {
     return `<tr>
       <td>${label}</td>
       <td class="mono">${escapeHtml(item.code)}</td>
-      <td class="num">${statStr}</td>
+      <td>${statStr}</td>
       <td class="num">${item.durability != null ? fmtInt(item.durability) + '%' : '–'}</td>
     </tr>`;
   });
   return `<table class="list">
-    <thead><tr><th>Slot</th><th>Item</th><th>Stat</th><th>Durability</th></tr></thead>
+    <thead><tr><th>Slot</th><th>Item</th><th>Stat</th><th class="num">Durability</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 }
@@ -827,12 +829,11 @@ function renderEconomy(p, data) {
   const eco = p.eco;
   const ecoPts = pointsSpent(p.levels, ECO_KEYS);
 
-  // Daily raw PP — formulas from GroxEmpire eco-sim README.
-  // work actions/day = floor(energyBar/10) × 2.4 × usage
-  // raw PP/day = actions × Production stat
+  // Daily PP formulas from GroxEmpire eco-sim README:
+  //   actions/day = floor(bar / 10) × 2.4 × usage
+  //   raw PP/day  = actions × Production stat
   const workActions = actionsPerDay(eco.energy, 1);
   const workPP = workActions * eco.production;
-  const entreSlots = Math.floor(eco.entrepreneurship / 10);
   const entreActions = actionsPerDay(eco.entrepreneurship, 1);
   const entrePP = entreActions * eco.production;
 
@@ -861,11 +862,11 @@ function renderEconomy(p, data) {
       <div class="skills">
         <div class="skill">
           <span class="skill-name">Working for others</span>
-          <span class="skill-value">${fmt(workPP, 1)} pp <span class="sub">${fmt(workActions, 1)} actions × ${eco.production}</span></span>
+          <span class="skill-value"><span class="sub">${fmt(workActions, 1)} actions × ${eco.production} =</span> <span class="total">${fmt(workPP, 1)} pp</span></span>
         </div>
         <div class="skill">
-          <span class="skill-name">Self-work in your own factories</span>
-          <span class="skill-value">${fmt(entrePP, 1)} pp <span class="sub">${fmt(entreActions, 1)} actions × ${eco.production}</span></span>
+          <span class="skill-name">Self-work in your factories</span>
+          <span class="skill-value"><span class="sub">${fmt(entreActions, 1)} actions × ${eco.production} =</span> <span class="total">${fmt(entrePP, 1)} pp</span></span>
         </div>
       </div>
     </div>
@@ -888,13 +889,13 @@ function companiesTable(comps) {
     <tr>
       <td>${escapeHtml(c.name)}</td>
       <td class="mono">${escapeHtml(c.itemCode)}</td>
-      <td class="num">${c.aeLevel != null ? 'AE ' + c.aeLevel : '–'}</td>
+      <td>${c.aeLevel != null ? 'AE ' + c.aeLevel : '–'}</td>
       <td class="num">${c.workerCount}</td>
       <td class="num">${c.production != null ? fmt(c.production, 1) : '–'}</td>
     </tr>
   `);
   return `<table class="list">
-    <thead><tr><th>Name</th><th>Item</th><th>AE</th><th>👷</th><th>Stored</th></tr></thead>
+    <thead><tr><th>Name</th><th>Item</th><th>Engine</th><th class="num">Workers</th><th class="num">Stored</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 }

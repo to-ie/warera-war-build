@@ -1430,8 +1430,8 @@ function renderEconomy(p, data) {
 
   const haveWageData = comps.some(c => c.dailyWageCost != null && c.dailyWageCost > 0);
 
-  // Tooltip — explains what's real vs estimated.
-  const factoryTip = `Real wages + fidelity from worker.getWorkers. Daily output = AE PP (linear from AE 5 = 120) + worker PP (${FACTORY_ASSUMPTIONS.workerActionsPerDay} actions × ${FACTORY_ASSUMPTIONS.workerProduction} prod default per worker, scaled by fidelity). Revenue at market price, minus ingredient cost for processed goods using hardcoded RECIPES (1:1 ratios — verify in-game). Tune FACTORY_ASSUMPTIONS / AE_TABLE / RECIPES if numbers don't match.`;
+  // User-facing tooltip — plain English, no code refs.
+  const factoryTip = `These factory numbers are estimates. What's real: your factories, worker count, wages, fidelity, and item market prices. What's estimated: each worker is assumed to do ~${FACTORY_ASSUMPTIONS.workerActionsPerDay} actions/day with production stat ~${FACTORY_ASSUMPTIONS.workerProduction}; Automated Engine output uses a linear model from AE 5 = 120 units/day; recipes for processed goods (steel, ammo, etc.) assume 1:1 ingredient ratios. Hover any factory row's ? for the per-factory breakdown. If totals look wrong vs in-game, mention which factory and we'll calibrate.`;
 
   $('#economy-content').innerHTML = `
     <div class="stats">
@@ -1480,36 +1480,52 @@ function renderEconomy(p, data) {
   $('#economy-badge').textContent = `${comps.length}/${eco.companies} factories`;
 }
 
-function companiesTable(comps, showWages) {
+/* Per-factory breakdown — surfaced as a tooltip on each row so the
+   user can see why a given Net/d number is what it is. */
+function factoryBreakdownTip(c) {
+  const parts = [];
+  if (c.aePP) parts.push(`Automated Engine: ${fmtInt(c.aePP)} units/day`);
+  if (c.workers && c.workers.length) {
+    const fidList = c.workers.map(w => `fid ${w.fidelity}`).join(', ');
+    parts.push(`${c.workers.length} worker(s) (${fidList}): +${fmtInt(c.workerPP)} units/day, wages ${fmtGold(c.dailyWageCost)}/day`);
+  } else if (c.workerCount > 0) {
+    parts.push(`${c.workerCount} worker(s) — details not loaded`);
+  }
+  if (c.dailyOutput) parts.push(`Total output: ${fmtInt(c.dailyOutput)} units/day`);
+  if (c.marketPrice != null) parts.push(`Market price ${fmtGold(c.marketPrice)} → revenue ${fmtGold(c.dailyRevenue)}/day`);
+  if (c.isProcessed && c.dailyIngredientCost != null) {
+    const recipeStr = c.recipeBreakdown.map(r => `${r.qty}× ${r.ingredient}`).join(' + ');
+    parts.push(`Ingredients (${recipeStr}): −${fmtGold(c.dailyIngredientCost)}/day`);
+  } else if (c.isProcessed) {
+    parts.push('Ingredient prices unavailable');
+  }
+  if (c.dailyNet != null) parts.push(`Net: ${fmtSigned(c.dailyNet)}/day`);
+  return parts.length ? parts.join(' · ') : 'No production data available';
+}
+
+function companiesTable(comps, _unused) {
   if (!comps.length) {
     return `<p class="muted" style="font-size:0.85rem; margin:0;">No companies found.</p>`;
   }
   const rows = comps.map(c => {
-    const wageCol = showWages
-      ? `<td class="num">${c.dailyWageCost != null ? fmtGold(c.dailyWageCost) : '–'}</td>`
-      : '';
-    const netCol = showWages
-      ? (c.dailyNet != null
-          ? `<td class="${c.dailyNet >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.dailyNet)}</td>`
-          : `<td class="num muted">–</td>`)
-      : '';
+    const netCol = c.dailyNet != null
+      ? `<td class="${c.dailyNet >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.dailyNet)}</td>`
+      : `<td class="num muted">–</td>`;
     return `<tr>
-      <td>${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.name)} <button class="info-btn" type="button" data-tip="${escapeAttr(factoryBreakdownTip(c))}">?</button></td>
       <td class="mono">${escapeHtml(c.itemCode)}</td>
       <td>${c.aeLevel ? 'AE ' + c.aeLevel : '–'}</td>
       <td class="num">${c.workerCount}</td>
       <td class="num">${c.dailyRevenue != null ? fmtGold(c.dailyRevenue) : '–'}</td>
-      ${wageCol}
       ${netCol}
     </tr>`;
   });
-  const wageHdr = showWages ? `<th class="num">Wages/d</th><th class="num">Net/d</th>` : '';
   return `<table class="list">
     <thead><tr>
       <th>Name</th><th>Item</th><th>Engine</th>
       <th class="num">Workers</th>
       <th class="num">Revenue/d</th>
-      ${wageHdr}
+      <th class="num">Net/d</th>
     </tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
@@ -1647,6 +1663,7 @@ function beforeTheWar(gap, stockpile, havePrices) {
   const grandTotal = gearTotal + stockpileTotal;
   const hasGearGap = gap.items.length > 0;
   const hasStockpile = stockpile.items.length > 0;
+  const gearPricesMissing = hasGearGap && gap.items.every(it => it.price == null);
 
   if (!hasGearGap && !hasStockpile) {
     return `<div class="section">
@@ -1659,6 +1676,7 @@ function beforeTheWar(gap, stockpile, havePrices) {
 
   // Gear sub-block
   if (hasGearGap) {
+    const gearTip = `Suggested gear upgrades for the selected build. Prices come from the market data endpoint, which currently doesn't include crafted gear — that's why prices may show ? for now. The slot/rarity targets are still usable as a shopping list.`;
     const rows = gap.items.map(it => {
       const fromCell = it.currentRarity
         ? `${rarityTag(it.currentRarity)}${escapeHtml(gearItemName(it.slot, it.currentRarity))}`
@@ -1674,19 +1692,30 @@ function beforeTheWar(gap, stockpile, havePrices) {
       </tr>`;
     }).join('');
 
-    const gearTotalLabel = gearTotal > 0 ? fmtGold(gearTotal) : 'prices unavailable';
-    blocks += `<div class="sub-label">Gear<span class="right">${gearTotalLabel}</span></div>
+    const gearTotalLabel = gearTotal > 0 ? fmtGold(gearTotal) : 'no prices';
+    blocks += `<div class="sub-label">Gear <button class="info-btn" type="button" data-tip="${escapeAttr(gearTip)}">?</button><span class="right">${gearTotalLabel}</span></div>
       <table class="list">
         <thead><tr><th>Slot</th><th>From</th><th>To</th><th class="num">Price</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>`;
+      </table>
+      ${gearPricesMissing ? '<p class="note">Crafted gear prices aren\'t in the market data we currently fetch — slot/rarity targets shown without prices. Total below excludes gear.</p>' : ''}`;
   } else {
     blocks += `<div class="sub-label">Gear</div>
       <p class="placeholder-text ok">✓ Target rarity met in every slot.</p>`;
   }
 
-  // Consumables sub-block
+  // Consumables sub-block with derivation tooltip
   if (hasStockpile) {
+    const pillItem = stockpile.items.find(i => i.kind === 'pill');
+    const ammoItem = stockpile.items.find(i => i.kind === 'ammo');
+    const foodItem = stockpile.items.find(i => i.kind === 'food');
+    const tipParts = [];
+    if (pillItem) tipParts.push(`Pills: 1/day during war × ${stockpile.days} days = ${fmtInt(pillItem.qty)}`);
+    if (ammoItem) tipParts.push(`Ammo: 1 per hit × ${fmt(stockpile.hitsPerDay, 1)} hits/day × ${stockpile.days} days = ${fmtInt(ammoItem.qty)}`);
+    if (foodItem) tipParts.push(`Food: 1 per ${stockpile.hunger} hits (your Hunger skill) × ${fmtInt(stockpile.totalHits)} hits = ${fmtInt(foodItem.qty)}`);
+    tipParts.push('Adjust War days or Hits/day above to recompute.');
+    const stockpileTip = tipParts.join(' · ');
+
     const rows = stockpile.items.map(it => `
       <tr>
         <td>${escapeHtml(it.label)}</td>
@@ -1696,17 +1725,20 @@ function beforeTheWar(gap, stockpile, havePrices) {
       </tr>
     `).join('');
 
-    blocks += `<div class="sub-label">Consumables · ${stockpile.days} days × ${fmt(stockpile.hitsPerDay, 1)} hits/day<span class="right">${fmtGold(stockpileTotal)}</span></div>
+    blocks += `<div class="sub-label">Consumables · ${stockpile.days} days × ${fmt(stockpile.hitsPerDay, 1)} hits/day <button class="info-btn" type="button" data-tip="${escapeAttr(stockpileTip)}">?</button><span class="right">${fmtGold(stockpileTotal)}</span></div>
       <table class="list">
         <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Line</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
   }
 
+  const totalSuffix = gearPricesMissing && hasGearGap
+    ? `<span class="muted" style="font-size: 0.75rem; font-weight: 400; margin-left: 0.4rem;">(consumables only)</span>`
+    : '';
+
   return `<div class="section">
-    <div class="section-label">Before the war<span class="right">${fmtGold(grandTotal)} total</span></div>
+    <div class="section-label">Before the war<span class="right">${fmtGold(grandTotal)} total${totalSuffix}</span></div>
     ${blocks}
-    ${!havePrices ? '<p class="note">Live prices unavailable — codes shown for reference.</p>' : ''}
     ${stockpile.anyMissingPrice ? '<p class="note">Some consumable prices missing — total excludes those lines.</p>' : ''}
   </div>`;
 }
@@ -1751,11 +1783,11 @@ function dailyDuringWarSection(d, havePrices, hitsPerDay, params) {
 
   const netClass = warNetEstimate >= 0 ? 'positive' : 'negative';
 
-  // Tooltip content carries all the explanation that used to live in <p class="flow-note">.
+  // Plain-English tooltip — what war does to your finances and what's modeled.
   const peaceLine = d.hasOwnWage
-    ? `Peacetime baseline: wage ${fmtGold(d.wageIncomePeace)}/day + factory net ${fmtSigned(d.factoryNet)} = ${fmtSigned(d.peaceNet)}/day.`
-    : `Peacetime baseline: factory net ${fmtSigned(d.factoryNet)}/day (no current employment detected).`;
-  const tip = `Assumes energy goes to fighting (no working-for-others wage). ${peaceLine} Factory revenue uses the tunable per-worker assumption noted in the Economy card; ingredient costs not modeled.`;
+    ? `Peacetime baseline: working-for-others wage ${fmtGold(d.wageIncomePeace)}/day + factory net ${fmtSigned(d.factoryNet)} = ${fmtSigned(d.peaceNet)}/day.`
+    : `Peacetime baseline: factory net ${fmtSigned(d.factoryNet)}/day (no current job detected).`;
+  const tip = `During war, your Energy pool goes to fighting instead of working for wages — so working-for-others income drops to 0. Factories keep running: revenue, worker wages, and ingredient costs all continue (see the Factories ? in the Economy card for the model). ${peaceLine}`;
 
   return `<div class="section">
     <div class="section-label">Daily during war<button class="info-btn" type="button" data-tip="${escapeAttr(tip)}">?</button>

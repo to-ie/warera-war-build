@@ -280,6 +280,61 @@
   .hidden { display: none !important; }
   .muted { color: var(--dim); }
 
+  /* INFO TOOLTIP — small (?) button with hover/focus-revealed bubble.
+     Works on touch devices: tap focuses the button which triggers :focus. */
+  .info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: help;
+    margin-left: 0.4rem;
+    position: relative;
+    padding: 0;
+    vertical-align: middle;
+    font-family: inherit;
+    line-height: 1;
+  }
+  .info-btn:hover,
+  .info-btn:focus {
+    outline: none;
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .info-btn::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 400;
+    white-space: normal;
+    width: 240px;
+    text-align: left;
+    color: var(--text);
+    line-height: 1.45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .info-btn:hover::after,
+  .info-btn:focus::after {
+    opacity: 1;
+  }
+
   /* RAW DEBUG */
   details.debug {
     margin-top: 1rem;
@@ -347,7 +402,10 @@
 
     <div class="grid">
       <div class="card">
-        <h3>Combat <span class="badge" id="combat-badge"></span></h3>
+        <h3>
+          <span>Combat <button class="info-btn" type="button" aria-label="About combat randomness" data-tip="Combat has built-in randomness — each hit lands between −5% and +5% of the listed damage. The Atk number shown is the expected average.">?</button></span>
+          <span class="badge" id="combat-badge"></span>
+        </h3>
         <div id="combat-content"></div>
       </div>
       <div class="card">
@@ -411,14 +469,15 @@ function flag(code) {
 /* ═══════════════════════════════════════════════════════════════════
  *  TRPC CLIENT
  *
- *  The Gateway / proxy speaks tRPC. Response is one of:
+ *  Warera's tRPC server expects BARE input on the URL (no superjson
+ *  `{json:...}` wrapper). Response is one of:
  *    { result: { data: { json: <data> } } }     superjson
  *    { result: { data: <data> } }               plain
  *    <data>                                     bare
  *  We unwrap with fallback so all three shapes work.
  * ═══════════════════════════════════════════════════════════════════ */
 async function trpc(endpoint, params = {}) {
-  const input = encodeURIComponent(JSON.stringify({ json: params }));
+  const input = encodeURIComponent(JSON.stringify(params));
   const url = `${CFG.API}/${endpoint}?input=${input}`;
   if (DEBUG) console.log(`→ ${endpoint}`, params);
   const res = await fetch(url);

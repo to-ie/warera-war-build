@@ -409,7 +409,8 @@
   .skill-value .sub { color: var(--dimmer); font-weight: 400; }
   .skill-value .total { color: var(--text); font-weight: 600; }
 
-  /* Tables — headers left-aligned (dejusted); numeric body cells stay right-aligned. */
+  /* Tables — headers left-aligned (dejusted); numeric body cells stay
+     right-aligned. Numbers nowrap so "796.14 ₿" never breaks across lines. */
   table.list { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   table.list th, table.list td {
     text-align: left;
@@ -422,11 +423,11 @@
     font-size: 0.78rem;
   }
   table.list td.mono { font-family: var(--mono); }
-  table.list td.num { text-align: right; font-family: var(--mono); }
+  table.list td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
   table.list tr:last-child td { border-bottom: 0; }
   table.list tr.empty td { color: var(--dimmer); font-style: italic; }
-  table.list td.pos { color: var(--accent); font-family: var(--mono); text-align: right; }
-  table.list td.neg { color: var(--error); font-family: var(--mono); text-align: right; }
+  table.list td.pos { color: var(--accent); font-family: var(--mono); text-align: right; white-space: nowrap; }
+  table.list td.neg { color: var(--error); font-family: var(--mono); text-align: right; white-space: nowrap; }
   table.list tr.total td {
     border-top: 1px solid var(--border-strong);
     border-bottom: 0;
@@ -516,8 +517,7 @@
   .hidden { display: none !important; }
   .muted { color: var(--dim); }
 
-  /* Tooltip system — uses a child .tip element instead of ::after, so it
-     can contain HTML (bold terms, rows). Each tip is structured rows. */
+  /* Tooltip system — child .tip element supports HTML rows with bold terms. */
   .info-btn {
     display: inline-flex;
     align-items: center;
@@ -639,7 +639,7 @@
     <div class="brand">
       <h1>War <span class="accent">Readiness</span></h1>
     </div>
-    <span class="brand sub">build planner for warera.io · v0.5</span>
+    <span class="brand sub">build planner for warera.io · v0.6</span>
   </div>
 </div>
 
@@ -737,12 +737,15 @@ function fmtInt(n) {
   if (n == null || isNaN(n)) return '–';
   return Math.round(Number(n)).toLocaleString();
 }
-function fmtGold(n, d = 2) { return n == null || isNaN(n) ? '–' : fmt(n, d) + ' g'; }
+/* Bitcoins are the in-game currency. ₿ is U+20BF. */
+function fmtBtc(n, d = 2) { return n == null || isNaN(n) ? '–' : fmt(n, d) + ' ₿'; }
 function fmtSigned(n, d = 2) {
   if (n == null || isNaN(n)) return '–';
   const sign = n > 0 ? '+' : '';
-  return sign + fmt(n, d) + ' g';
+  return sign + fmt(n, d) + ' ₿';
 }
+/* Back-compat alias — keeps any older call sites working until cleaned up. */
+const fmtGold = fmtBtc;
 function flag(code) {
   if (!code || code.length !== 2) return '🏳️';
   return code.toUpperCase().split('').map(c =>
@@ -752,8 +755,7 @@ function flag(code) {
 function midpoint([min, max]) { return (min + max) / 2; }
 
 /* Tooltip helpers — child-element pattern so we can render bold terms
-   and per-row layout. Pass either a string (single plain row) or an
-   array of `{term, desc}` objects (or strings for unstyled rows). */
+   and per-row layout. */
 function tipRows(content) {
   if (typeof content === 'string') {
     return `<span class="tip-row">${escapeHtml(content)}</span>`;
@@ -869,7 +871,7 @@ const RECIPES = {
   cocain:     { coca: 1 },
 };
 
-/* Factory output assumptions — tune to match in-game. */
+/* Company production assumptions — tune to match in-game. */
 const FACTORY_ASSUMPTIONS = {
   workerActionsPerDay: 12,
   workerProduction: 15,
@@ -885,7 +887,7 @@ const PRESETS = {
   },
   highDamage: {
     name: 'War High-Damage',
-    tagline: 'Pill active. Legendary weapon + boots, Epic everything else. Burns gold for output.',
+    tagline: 'Pill active. Legendary weapon + boots, Epic everything else. Burns bitcoins for output.',
     gear: { weapon: 'legendary', helmet: 'epic', chest: 'epic', pants: 'epic', boots: 'legendary', gloves: 'epic' },
     buffs: { pill: true, ammo: 'ammo', food: 'fish' },
   },
@@ -1105,9 +1107,7 @@ function extractEquipment(inv) {
   };
 }
 
-/* Compute real per-factory output, revenue, costs, and net using
-   AE_TABLE + workersByCompanyId + RECIPES. Falls back gracefully when
-   data is missing. */
+/* Compute real per-company output, revenue, costs, and net. */
 function extractCompanies(data) {
   const items = Array.isArray(data.companies) ? data.companies : [];
   const prices = data.prices || {};
@@ -1121,11 +1121,8 @@ function extractCompanies(data) {
     const aeLevel = co.activeUpgradeLevels?.automatedEngine ?? 0;
     const price = prices[itemCodeStr] != null ? Number(prices[itemCodeStr]) : null;
 
-    // Automated Engine output (fixed table).
     const aePP = AE_TABLE[aeLevel] ?? (aeLevel * 24);
 
-    // Worker output: prefer real worker records (with fidelity + wage).
-    // Fall back to estimate from workerCount if records missing.
     const workers = workersByCompany[id] || [];
     let workerPP = 0;
     let dailyWageCost = null;
@@ -1142,14 +1139,12 @@ function extractCompanies(data) {
       });
       dailyWageCost = wageSum;
     } else if (workerCount > 0) {
-      // Estimate at 0 fidelity, wage unknown.
       workerPP = workerCount * A.workerActionsPerDay * A.workerProduction;
     }
 
     const dailyOutput = (aePP + workerPP) * A.outputCalibration;
     const dailyRevenue = price != null ? dailyOutput * price : null;
 
-    // Ingredient cost for processed goods.
     const recipe = RECIPES[itemCodeStr];
     const isProcessed = !!recipe;
     const recipeBreakdown = [];
@@ -1372,13 +1367,11 @@ function renderPlayer(data) {
   }
   $('#player-meta').innerHTML = meta.join(' ');
 
-  // Card-level info buttons with rich stat descriptions.
   $('#combat-info').innerHTML = infoBtn(COMBAT_STAT_DESCRIPTIONS, 'Combat stat reference');
   $('#economy-info').innerHTML = infoBtn(ECONOMY_STAT_DESCRIPTIONS, 'Economy stat reference');
   $('#target-info').innerHTML = infoBtn([
-    { term: 'Target combat', desc: 'Stats you would have with this loadout (gear + buffs).' },
-    { term: 'Before the war', desc: 'Gear upgrades and consumables to acquire ahead of time.' },
-    { term: 'Daily during war', desc: 'Running gold flow once fighting starts — income from factories minus consumable burn.' },
+    { term: 'Pick a preset', desc: 'War Basic, High-Damage, or Debuff. The tagline under the picker explains each one\'s tradeoff.' },
+    { term: 'See the impact', desc: 'Your target combat stats with that loadout, what to buy before the war, and your daily bitcoin flow while fighting.' },
   ], 'Target build help');
 
   renderCombat(p, data);
@@ -1522,16 +1515,16 @@ function renderEconomy(p, data) {
   const ownWage = offerWage(data.ownWorkOffer);
   const dailyWageIncome = ownWage != null ? ownWage * workActions : null;
 
-  const factoryTip = [
-    { term: 'Real data', desc: 'Your factories, worker count, wages and fidelity, item market prices.' },
+  const companyTip = [
+    { term: 'Real data', desc: 'Your companies, worker count, wages and fidelity, item market prices.' },
     { term: 'Estimated', desc: `Each worker assumed at ~${FACTORY_ASSUMPTIONS.workerActionsPerDay} actions/day with production ~${FACTORY_ASSUMPTIONS.workerProduction}; AE output uses a linear model from AE 5 = 120; processed-goods recipes assume 1:1 ingredient ratios.` },
-    { term: 'Per factory', desc: 'Hover the ? next to a factory name for its AE + worker + ingredient breakdown.' },
-    { term: 'Calibration', desc: 'If totals look wrong vs in-game, mention which factory and we will tune defaults.' },
+    { term: 'Per company', desc: 'Hover the ? next to a company name for its AE + worker + ingredient breakdown.' },
+    { term: 'Calibration', desc: 'If totals look wrong vs in-game, mention which company and we will tune defaults.' },
   ];
   const dailyActionsTip = [
     { term: 'Energy pool', desc: 'Powers fighting and working-for-others — same pool, you pick one each day.' },
-    { term: 'Entrepreneurship pool', desc: 'Powers self-work in your own factories — separate pool, runs in parallel.' },
-    { term: 'Current job wage', desc: 'Gold per action × actions per day. Goes to 0 during war while energy is spent fighting.' },
+    { term: 'Entrepreneurship pool', desc: 'Powers self-work in your own companies — separate pool, runs in parallel.' },
+    { term: 'Current job wage', desc: 'Bitcoin per action × actions per day. Goes to 0 during war while energy is spent fighting.' },
   ];
 
   $('#economy-content').innerHTML = `
@@ -1568,27 +1561,27 @@ function renderEconomy(p, data) {
         ${ownWage != null ? `
         <div class="skill">
           <span class="skill-name">Current job wage</span>
-          <span class="skill-value"><span class="total">${fmtGold(dailyWageIncome)}/day</span> <span class="sub">at ${fmt(ownWage, 3)} g/action</span></span>
+          <span class="skill-value"><span class="total">${fmtBtc(dailyWageIncome)}/day</span> <span class="sub">at ${fmt(ownWage, 3)} ₿/action</span></span>
         </div>` : ''}
       </div>
     </div>
 
     <div class="section">
-      <div class="section-label">Factories · ${comps.length}/${eco.companies} ${infoBtn(factoryTip)}</div>
+      <div class="section-label">Companies · ${comps.length}/${eco.companies} ${infoBtn(companyTip)}</div>
       ${companiesTable(comps)}
     </div>
   `;
-  $('#economy-badge').textContent = `${comps.length}/${eco.companies} factories`;
+  $('#economy-badge').textContent = `${comps.length}/${eco.companies} companies`;
 }
 
-/* Per-factory breakdown — rich tooltip rows showing each contribution. */
-function factoryBreakdownRows(c) {
+/* Per-company breakdown — rich tooltip rows showing each contribution. */
+function companyBreakdownRows(c) {
   const rows = [];
   rows.push({ term: 'Engine', desc: c.aeLevel ? `AE ${c.aeLevel} → ${fmtInt(c.aePP)} units/day` : 'No automated engine' });
 
   if (c.workers && c.workers.length) {
-    const fidList = c.workers.map(w => `fid ${w.fidelity} @ ${fmt(w.wage, 3)} g/act`).join(', ');
-    rows.push({ term: 'Workers', desc: `${c.workers.length} (${fidList}) → +${fmtInt(c.workerPP)} units/day, wages ${fmtGold(c.dailyWageCost)}/day` });
+    const fidList = c.workers.map(w => `fid ${w.fidelity} @ ${fmt(w.wage, 3)} ₿/act`).join(', ');
+    rows.push({ term: 'Workers', desc: `${c.workers.length} (${fidList}) → +${fmtInt(c.workerPP)} units/day, wages ${fmtBtc(c.dailyWageCost)}/day` });
   } else if (c.workerCount > 0) {
     rows.push({ term: 'Workers', desc: `${c.workerCount} worker(s), details not loaded — estimated +${fmtInt(c.workerPP)} units/day at 0 fidelity` });
   } else {
@@ -1598,7 +1591,7 @@ function factoryBreakdownRows(c) {
   if (c.dailyOutput) rows.push({ term: 'Total output', desc: `${fmtInt(c.dailyOutput)} units/day` });
 
   if (c.marketPrice != null) {
-    rows.push({ term: 'Revenue', desc: `${fmt(c.marketPrice, 3)} g × ${fmtInt(c.dailyOutput)} = ${fmtGold(c.dailyRevenue)}/day` });
+    rows.push({ term: 'Revenue', desc: `${fmt(c.marketPrice, 3)} ₿ × ${fmtInt(c.dailyOutput)} = ${fmtBtc(c.dailyRevenue)}/day` });
   } else {
     rows.push({ term: 'Revenue', desc: 'Market price unavailable' });
   }
@@ -1606,7 +1599,7 @@ function factoryBreakdownRows(c) {
   if (c.isProcessed) {
     if (c.dailyIngredientCost != null) {
       const recipeStr = c.recipeBreakdown.map(r => `${r.qty}× ${r.ingredient}`).join(' + ');
-      rows.push({ term: 'Ingredients', desc: `${recipeStr} → −${fmtGold(c.dailyIngredientCost)}/day` });
+      rows.push({ term: 'Ingredients', desc: `${recipeStr} → −${fmtBtc(c.dailyIngredientCost)}/day` });
     } else {
       rows.push({ term: 'Ingredients', desc: 'Some ingredient prices unavailable' });
     }
@@ -1622,13 +1615,15 @@ function companiesTable(comps) {
   }
   const rows = comps.map(c => {
     const revCol = c.dailyRevenue != null
-      ? `<td class="num">${fmtGold(c.dailyRevenue)}</td>`
+      ? `<td class="num">${fmtBtc(c.dailyRevenue)}</td>`
       : `<td class="num muted">–</td>`;
     const netCol = c.dailyNet != null
       ? `<td class="${c.dailyNet >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.dailyNet)}</td>`
       : `<td class="num muted">–</td>`;
+    // &nbsp; before the ? glues it to the last word of the name so it
+    // doesn't drop alone onto a new line when the name wraps.
     return `<tr>
-      <td>${escapeHtml(c.name)} ${infoBtn(factoryBreakdownRows(c), c.name + ' breakdown')}</td>
+      <td>${escapeHtml(c.name)}&nbsp;${infoBtn(companyBreakdownRows(c), c.name + ' breakdown')}</td>
       <td class="mono">${escapeHtml(c.itemCode)}</td>
       <td>${c.aeLevel ? 'AE ' + c.aeLevel : '–'}</td>
       <td class="num">${c.workerCount}</td>
@@ -1794,7 +1789,6 @@ function beforeTheWar(gap, stockpile, havePrices) {
 
   let blocks = '';
 
-  // Gear sub-block
   if (hasGearGap) {
     const gearTip = [
       { term: 'Targets', desc: 'Suggested gear upgrades for the selected build, by slot and rarity.' },
@@ -1812,11 +1806,11 @@ function beforeTheWar(gap, stockpile, havePrices) {
         <td>${SLOT_LABEL[it.slot]}</td>
         <td>${fromCell}</td>
         <td>${toCell}</td>
-        <td class="num">${it.price != null ? fmtGold(it.price) : (havePrices ? '?' : '–')}</td>
+        <td class="num">${it.price != null ? fmtBtc(it.price) : (havePrices ? '?' : '–')}</td>
       </tr>`;
     }).join('');
 
-    const gearTotalLabel = gearTotal > 0 ? fmtGold(gearTotal) : 'no prices';
+    const gearTotalLabel = gearTotal > 0 ? fmtBtc(gearTotal) : 'no prices';
     blocks += `<div class="sub-label">Gear ${infoBtn(gearTip)}<span class="right">${gearTotalLabel}</span></div>
       <table class="list">
         <thead><tr><th>Slot</th><th>From</th><th>To</th><th>Price</th></tr></thead>
@@ -1828,7 +1822,6 @@ function beforeTheWar(gap, stockpile, havePrices) {
       <p class="placeholder-text ok">✓ Target rarity met in every slot.</p>`;
   }
 
-  // Consumables sub-block with derivation tooltip
   if (hasStockpile) {
     const pillItem = stockpile.items.find(i => i.kind === 'pill');
     const ammoItem = stockpile.items.find(i => i.kind === 'ammo');
@@ -1843,12 +1836,12 @@ function beforeTheWar(gap, stockpile, havePrices) {
       <tr>
         <td>${escapeHtml(it.label)}</td>
         <td class="num">${fmtInt(it.qty)}</td>
-        <td class="num">${it.unit != null ? fmtGold(it.unit) : (havePrices ? '?' : '–')}</td>
-        <td class="num">${it.line != null ? fmtGold(it.line) : '–'}</td>
+        <td class="num">${it.unit != null ? fmtBtc(it.unit) : (havePrices ? '?' : '–')}</td>
+        <td class="num">${it.line != null ? fmtBtc(it.line) : '–'}</td>
       </tr>
     `).join('');
 
-    blocks += `<div class="sub-label">Consumables · ${stockpile.days} days × ${fmt(stockpile.hitsPerDay, 1)} hits/day ${infoBtn(tipRowsArr)}<span class="right">${fmtGold(stockpileTotal)}</span></div>
+    blocks += `<div class="sub-label">Consumables · ${stockpile.days} days × ${fmt(stockpile.hitsPerDay, 1)} hits/day ${infoBtn(tipRowsArr)}<span class="right">${fmtBtc(stockpileTotal)}</span></div>
       <table class="list">
         <thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Line</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -1860,7 +1853,7 @@ function beforeTheWar(gap, stockpile, havePrices) {
     : '';
 
   return `<div class="section">
-    <div class="section-label">Before the war<span class="right">${fmtGold(grandTotal)} total${totalSuffix}</span></div>
+    <div class="section-label">Before the war<span class="right">${fmtBtc(grandTotal)} total${totalSuffix}</span></div>
     ${blocks}
     ${stockpile.anyMissingPrice ? '<p class="note">Some consumable prices missing — total excludes those lines.</p>' : ''}
   </div>`;
@@ -1870,7 +1863,7 @@ function beforeTheWar(gap, stockpile, havePrices) {
 function dailyDuringWarSection(d, havePrices, hitsPerDay, params) {
   const incomeLines = [];
   if (d.factoriesHaveRevenue) {
-    incomeLines.push({ label: 'Factory revenue', qty: null, value: d.factoryRevenue, cls: 'pos' });
+    incomeLines.push({ label: 'Company revenue', qty: null, value: d.factoryRevenue, cls: 'pos' });
   }
   if (d.factoriesHaveWage) {
     incomeLines.push({ label: 'Worker payroll (cost)', qty: null, value: -d.factoryWageCost, cls: 'neg' });
@@ -1879,7 +1872,7 @@ function dailyDuringWarSection(d, havePrices, hitsPerDay, params) {
     incomeLines.push({ label: 'Ingredient cost', qty: null, value: -d.factoryIngCost, cls: 'neg' });
   }
   if (!d.factoriesHaveRevenue && !d.factoriesHaveWage) {
-    incomeLines.push({ label: 'Factory data', value: null, qty: null, cls: 'unk', note: 'unavailable' });
+    incomeLines.push({ label: 'Company data', value: null, qty: null, cls: 'unk', note: 'unavailable' });
   }
   incomeLines.push({ label: 'Working-for-others wage', qty: 'paused during war', value: 0, cls: 'neg' });
 
@@ -1901,7 +1894,7 @@ function dailyDuringWarSection(d, havePrices, hitsPerDay, params) {
   const renderLine = (l) => {
     let valStr;
     if (l.value == null) valStr = `<span class="lv unk">${l.note || '?'}</span>`;
-    else valStr = `<span class="lv ${l.cls}">${l.cls === 'neg' && l.value !== 0 ? fmtSigned(l.value < 0 ? l.value : -l.value) : (l.value === 0 ? '0 g' : fmtSigned(l.value))}</span>`;
+    else valStr = `<span class="lv ${l.cls}">${l.cls === 'neg' && l.value !== 0 ? fmtSigned(l.value < 0 ? l.value : -l.value) : (l.value === 0 ? '0 ₿' : fmtSigned(l.value))}</span>`;
     return `<div class="flow-line">
       <span class="ll">${escapeHtml(l.label)}${l.qty != null ? `<span class="qty">${typeof l.qty === 'number' ? '× ' + fmt(l.qty, 1) : l.qty}</span>` : ''}</span>
       ${valStr}
@@ -1911,18 +1904,18 @@ function dailyDuringWarSection(d, havePrices, hitsPerDay, params) {
   const netClass = warNetEstimate >= 0 ? 'positive' : 'negative';
 
   const peaceLine = d.hasOwnWage
-    ? `Working-for-others wage ${fmtGold(d.wageIncomePeace)}/day + factory net ${fmtSigned(d.factoryNet)} = ${fmtSigned(d.peaceNet)}/day.`
-    : `Factory net ${fmtSigned(d.factoryNet)}/day (no current job detected).`;
+    ? `Working-for-others wage ${fmtBtc(d.wageIncomePeace)}/day + company net ${fmtSigned(d.factoryNet)} = ${fmtSigned(d.peaceNet)}/day.`
+    : `Company net ${fmtSigned(d.factoryNet)}/day (no current job detected).`;
 
   const tipRowsArr = [
     { term: 'War shift', desc: 'Your Energy goes to fighting instead of working — working-for-others wage drops to 0.' },
-    { term: 'Factories', desc: 'Keep running. Revenue, worker wages, and ingredient costs all continue (see the Factories ? in the Economy card for the model).' },
+    { term: 'Companies', desc: 'Keep running. Revenue, worker wages, and ingredient costs all continue (see the Companies ? in the Economy card for the model).' },
     { term: 'Peace baseline', desc: peaceLine },
   ];
 
   return `<div class="section">
     <div class="section-label">Daily during war ${infoBtn(tipRowsArr)}
-      <span class="right">vs peace: ${burnVsPeace >= 0 ? '−' : '+'}${fmtGold(Math.abs(burnVsPeace))}/day</span>
+      <span class="right">vs peace: ${burnVsPeace >= 0 ? '−' : '+'}${fmtBtc(Math.abs(burnVsPeace))}/day</span>
     </div>
     <div class="flow">
       <div class="flow-side">

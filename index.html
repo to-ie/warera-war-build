@@ -187,14 +187,19 @@
     border-radius: 6px;
     padding: 0.55rem 0.7rem;
     text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 4.5em;
   }
   .stat-label {
     display: block;
     color: var(--dim);
-    font-size: 0.74rem;
-    margin-bottom: 0.25rem;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    margin-bottom: 0.35rem;
     overflow-wrap: break-word;
-    word-break: break-word;
+    hyphens: auto;
   }
   .stat-value {
     font-family: var(--mono);

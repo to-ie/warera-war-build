@@ -451,15 +451,14 @@ function flag(code) {
 /* ═══════════════════════════════════════════════════════════════════
  *  TRPC CLIENT
  *
- *  Warera's tRPC server expects BATCHED requests with superjson-wrapped
- *  input: `?batch=1&input={"0":{"json":<params>}}`. Response is an array:
- *    [{ result: { data: { json: <data> } } }]   on success
- *    [{ error: ... }]                            on error
+ *  Warera's tRPC server uses BARE input on the URL: `?input=<params>`
+ *  (no batch wrapper, no superjson `{json:...}` wrapper). Response can
+ *  be a single object or a batched array depending on the endpoint, so
+ *  we unwrap defensively.
  * ═══════════════════════════════════════════════════════════════════ */
 async function trpc(endpoint, params = {}) {
-  const batchInput = { 0: { json: params } };
-  const input = encodeURIComponent(JSON.stringify(batchInput));
-  const url = `${CFG.API}/${endpoint}?batch=1&input=${input}`;
+  const input = encodeURIComponent(JSON.stringify(params));
+  const url = `${CFG.API}/${endpoint}?input=${input}`;
   if (DEBUG) console.log(`→ ${endpoint}`, params);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${endpoint} HTTP ${res.status}`);

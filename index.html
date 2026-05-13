@@ -734,13 +734,13 @@ function renderCombat(p, data) {
 
   $('#combat-content').innerHTML = `
     <div class="stats">
-      <div class="stat"><span class="stat-label">Atk</span><span class="stat-value">${fmtInt(d.atk)}</span></div>
-      <div class="stat"><span class="stat-label">Prc</span><span class="stat-value">${fmtInt(d.prc)}%</span></div>
-      <div class="stat"><span class="stat-label">CC</span><span class="stat-value">${fmtInt(d.cc)}%</span></div>
-      <div class="stat"><span class="stat-label">CD</span><span class="stat-value">${fmtInt(d.cd)}%</span></div>
-      <div class="stat"><span class="stat-label">Arm</span><span class="stat-value">${fmtInt(d.arm)}%</span></div>
-      <div class="stat"><span class="stat-label">Ddg</span><span class="stat-value">${fmtInt(d.ddg)}%</span></div>
-      <div class="stat"><span class="stat-label">HP</span><span class="stat-value">${fmtInt(d.hp)}</span></div>
+      <div class="stat"><span class="stat-label">Attack</span><span class="stat-value">${fmtInt(d.atk)}</span></div>
+      <div class="stat"><span class="stat-label">Precision</span><span class="stat-value">${fmtInt(d.prc)}%</span></div>
+      <div class="stat"><span class="stat-label">Crit chance</span><span class="stat-value">${fmtInt(d.cc)}%</span></div>
+      <div class="stat"><span class="stat-label">Crit damage</span><span class="stat-value">${fmtInt(d.cd)}%</span></div>
+      <div class="stat"><span class="stat-label">Armor</span><span class="stat-value">${fmtInt(d.arm)}%</span></div>
+      <div class="stat"><span class="stat-label">Dodge</span><span class="stat-value">${fmtInt(d.ddg)}%</span></div>
+      <div class="stat"><span class="stat-label">Health</span><span class="stat-value">${fmtInt(d.hp)}</span></div>
     </div>
 
     <div class="section">
@@ -763,7 +763,7 @@ function renderCombat(p, data) {
       ${equipmentTable(eq)}
     </div>
   `;
-  $('#combat-badge').textContent = `${fmtInt(d.atk)} atk`;
+  $('#combat-badge').textContent = `${fmtInt(d.atk)} attack`;
 }
 
 function skillRow(label, value) {
@@ -774,12 +774,12 @@ function skillRow(label, value) {
  * `slot.skills.{statKey}` from the API and display the value with a
  * short label (atk, cc, cd, arm, ddg, prc). */
 const STAT_LABELS = {
-  attack: 'atk',
-  criticalChance: 'cc',
-  criticalDamages: 'cd',
-  armor: 'arm',
-  dodge: 'ddg',
-  precision: 'prc',
+  attack: 'attack',
+  criticalChance: 'crit chance',
+  criticalDamages: 'crit damage',
+  armor: 'armor',
+  dodge: 'dodge',
+  precision: 'precision',
 };
 
 function equipmentTable(eq) {
@@ -809,7 +809,7 @@ function equipmentTable(eq) {
     </tr>`;
   });
   return `<table class="list">
-    <thead><tr><th>Slot</th><th>Item</th><th>Stat</th><th>Dur</th></tr></thead>
+    <thead><tr><th>Slot</th><th>Item</th><th>Stat</th><th>Durability</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 }
@@ -839,10 +839,10 @@ function renderEconomy(p, data) {
   $('#economy-content').innerHTML = `
     <div class="stats">
       <div class="stat"><span class="stat-label">Energy</span><span class="stat-value">${eco.energy}</span></div>
-      <div class="stat"><span class="stat-label">Entre</span><span class="stat-value">${eco.entrepreneurship}</span></div>
-      <div class="stat"><span class="stat-label">Prod</span><span class="stat-value">${eco.production}</span></div>
-      <div class="stat"><span class="stat-label">Cos lim</span><span class="stat-value">${eco.companies}</span></div>
-      <div class="stat"><span class="stat-label">Mgmt</span><span class="stat-value">${eco.management}</span></div>
+      <div class="stat"><span class="stat-label">Entrepreneurship</span><span class="stat-value">${eco.entrepreneurship}</span></div>
+      <div class="stat"><span class="stat-label">Production</span><span class="stat-value">${eco.production}</span></div>
+      <div class="stat"><span class="stat-label">Companies</span><span class="stat-value">${eco.companies}</span></div>
+      <div class="stat"><span class="stat-label">Management</span><span class="stat-value">${eco.management}</span></div>
     </div>
 
     <div class="section">
@@ -857,15 +857,15 @@ function renderEconomy(p, data) {
     </div>
 
     <div class="section">
-      <div class="section-label">Daily raw PP</div>
+      <div class="section-label">Daily production points</div>
       <div class="skills">
         <div class="skill">
-          <span class="skill-name">Work (energy → PP)</span>
-          <span class="skill-value">${fmt(workPP, 1)} <span class="sub">${fmt(workActions, 1)} × ${eco.production}</span></span>
+          <span class="skill-name">Working for others</span>
+          <span class="skill-value">${fmt(workPP, 1)} pp <span class="sub">${fmt(workActions, 1)} actions × ${eco.production}</span></span>
         </div>
         <div class="skill">
-          <span class="skill-name">Self-work (entre)</span>
-          <span class="skill-value">${fmt(entrePP, 1)} <span class="sub">${entreSlots} slots/10h</span></span>
+          <span class="skill-name">Self-work in your own factories</span>
+          <span class="skill-value">${fmt(entrePP, 1)} pp <span class="sub">${fmt(entreActions, 1)} actions × ${eco.production}</span></span>
         </div>
       </div>
     </div>

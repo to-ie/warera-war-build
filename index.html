@@ -36,11 +36,7 @@
     font-size: 15px;
   }
 
-  /* TOPBAR */
-  .topbar {
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
+  .topbar { border-bottom: 1px solid var(--border); background: var(--surface); }
   .topbar-inner {
     max-width: 1100px;
     margin: 0 auto;
@@ -57,12 +53,8 @@
     letter-spacing: -0.01em;
   }
   .brand .accent { color: var(--accent); }
-  .brand .sub {
-    color: var(--dimmer);
-    font-size: 0.85rem;
-  }
+  .brand .sub { color: var(--dimmer); font-size: 0.85rem; }
 
-  /* MAIN */
   main {
     flex: 1;
     max-width: 1100px;
@@ -71,7 +63,6 @@
     padding: 1.5rem;
   }
 
-  /* SEARCH */
   .search-row {
     display: flex;
     gap: 0.5rem;
@@ -117,7 +108,6 @@
   .status.error { color: var(--error); }
   .status.ok { color: var(--accent); }
 
-  /* PLAYER HEAD */
   .player-head {
     display: flex;
     align-items: center;
@@ -152,7 +142,6 @@
   }
   .pill .mono { font-family: var(--mono); }
 
-  /* GRID */
   .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -186,7 +175,6 @@
     font-family: var(--mono);
   }
 
-  /* STATS GRID */
   .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
@@ -213,7 +201,6 @@
     font-size: 0.95rem;
   }
 
-  /* SECTIONS WITHIN CARD */
   .section { margin-top: 1rem; }
   .section:first-child { margin-top: 0; }
   .section-label {
@@ -238,17 +225,13 @@
     border-radius: 4px;
   }
   .skill-name { color: var(--dim); }
-  .skill-value {
-    font-family: var(--mono);
-    font-weight: 500;
-  }
+  .skill-value { font-family: var(--mono); font-weight: 500; }
   .skill .sub {
     color: var(--dimmer);
     font-size: 0.78rem;
     margin-left: 0.4rem;
   }
 
-  /* TABLES */
   table.list {
     width: 100%;
     border-collapse: collapse;
@@ -331,11 +314,8 @@
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
   .info-btn:hover::after,
-  .info-btn:focus::after {
-    opacity: 1;
-  }
+  .info-btn:focus::after { opacity: 1; }
 
-  /* RAW DEBUG */
   details.debug {
     margin-top: 1rem;
     padding: 0.6rem 0.85rem;
@@ -360,7 +340,6 @@
     max-height: 400px;
   }
 
-  /* FOOTER */
   footer {
     border-top: 1px solid var(--border);
     padding: 1rem 1.5rem;
@@ -472,108 +451,44 @@ function flag(code) {
 /* ═══════════════════════════════════════════════════════════════════
  *  TRPC CLIENT
  *
- *  Warera's tRPC server expects BARE input on the URL (no superjson
- *  `{json:...}` wrapper). Response is one of:
- *    { result: { data: { json: <data> } } }     superjson
- *    { result: { data: <data> } }               plain
- *    <data>                                     bare
- *  We unwrap with fallback so all three shapes work.
+ *  Warera's tRPC server expects BATCHED requests with superjson-wrapped
+ *  input: `?batch=1&input={"0":{"json":<params>}}`. Response is an array:
+ *    [{ result: { data: { json: <data> } } }]   on success
+ *    [{ error: ... }]                            on error
  * ═══════════════════════════════════════════════════════════════════ */
 async function trpc(endpoint, params = {}) {
-  const input = encodeURIComponent(JSON.stringify(params));
-  const url = `${CFG.API}/${endpoint}?input=${input}`;
+  const batchInput = { 0: { json: params } };
+  const input = encodeURIComponent(JSON.stringify(batchInput));
+  const url = `${CFG.API}/${endpoint}?batch=1&input=${input}`;
   if (DEBUG) console.log(`→ ${endpoint}`, params);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${endpoint} HTTP ${res.status}`);
   const json = await res.json();
   if (DEBUG) console.log(`← ${endpoint}`, json);
-  if (json?.error) throw new Error(`${endpoint}: ${json.error.message || 'error'}`);
-  const d = json?.result?.data;
-  return d?.json ?? d ?? json;
+  const item = Array.isArray(json) ? json[0] : json;
+  if (item?.error) throw new Error(`${endpoint}: ${item.error.message || 'error'}`);
+  const d = item?.result?.data;
+  return d?.json ?? d ?? item;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
  *  GAME CONSTANTS
- *
- *  Eco bases verified against toie level-18 screenshot (Image 12):
- *    Energy lvl 6  → 90 displayed   ⟹ base 30 + 6×10
- *    Entre  lvl 5  → 55 displayed   ⟹ base 30 + 5×5
- *    Prod   lvl 6  → 28 displayed   ⟹ base 10 + 6×3
- *    Cos    lvl 5  → 7  displayed   ⟹ base 2  + 5×1
- *    Mgmt   lvl 0  → 4  displayed   ⟹ base 4
- *
- *  Fight bases from in-game tooltips (Image 11). Per-level fight-skill
- *  gains are TBD — placeholders below until calibrated against donuz's
- *  netlify sim by clicking +/- once per skill.
+ *  Eco bases verified against toie level-18 numbers from the API.
+ *  Server returns pre-computed `.total` for each stat, so we mostly
+ *  just read those for display; bases/gains used only for projecting
+ *  hypothetical builds (future work).
  * ═══════════════════════════════════════════════════════════════════ */
 const ECO_BASE = { energy: 30, entrepreneurship: 30, production: 10, companies: 2, management: 4 };
 const ECO_GAIN = { energy: 10, entrepreneurship: 5, production: 3, companies: 1, management: 2 };
-const FIGHT_BASE = {
-  attack: 100, precision: 50, critChance: 10, critDamage: 100,
-  armor: 0, dodge: 0, health: 100, loot: 5, hunger: 4,
-};
-const FIGHT_GAIN = {
-  attack: 0, precision: 0, critChance: 0, critDamage: 0,
-  armor: 0, dodge: 0, health: 0, loot: 0, hunger: 0,
-};
-const DR_K = 40; // diminishing-returns constant for armor/dodge
+const FIGHT_KEYS = ['attack','precision','criticalChance','criticalDamages','armor','dodge','health','lootChance','hunger'];
+const ECO_KEYS = ['energy','entrepreneurship','production','companies','management'];
 
-/* ═══════════════════════════════════════════════════════════════════
- *  ECO MATH (formulas: TheGroxEmpire/warera-eco-simulator README)
- * ═══════════════════════════════════════════════════════════════════ */
-function ecoStat(name, level) {
-  return (ECO_BASE[name] || 0) + (ECO_GAIN[name] || 0) * (level || 0);
+function pointsForLevel(level) {
+  // progressive cost: level N costs 1+2+...+N total
+  return (level * (level + 1)) / 2;
 }
-function actionsPerDay(bar, usagePct = 1) {
-  return Math.floor(bar / 10) * 2.4 * usagePct;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
- *  BATTLE MATH (derived stats verified vs Image 5: toie atk 401)
- *    Atk = (base + weapon) × ∏(1 + buff%) × (1 + rank%) × (1 + pol%)
- *    Prc, CC, CD: additive (base + gear)
- *    Arm, Ddg: raw / (raw + 40) displayed %
- * ═══════════════════════════════════════════════════════════════════ */
-function diminishing(raw) { return raw / (raw + DR_K) * 100; }
-
-function computeDerived({ fightSkills = {}, equipment = {}, buffs = {}, rank = 0, political = 0 }) {
-  const fs = fightSkills;
-  const baseAtk = FIGHT_BASE.attack + (fs.attack || 0) * FIGHT_GAIN.attack;
-  const basePrc = FIGHT_BASE.precision + (fs.precision || 0) * FIGHT_GAIN.precision;
-  const baseCC  = FIGHT_BASE.critChance + (fs.critChance || 0) * FIGHT_GAIN.critChance;
-  const baseCD  = FIGHT_BASE.critDamage + (fs.critDamage || 0) * FIGHT_GAIN.critDamage;
-  const baseArm = FIGHT_BASE.armor + (fs.armor || 0) * FIGHT_GAIN.armor;
-  const baseDdg = FIGHT_BASE.dodge + (fs.dodge || 0) * FIGHT_GAIN.dodge;
-  const baseHP  = FIGHT_BASE.health + (fs.health || 0) * FIGHT_GAIN.health;
-
-  const w = equipment.weapon || {};
-  const h = equipment.helmet || {};
-  const c = equipment.chest  || {};
-  const p = equipment.pants  || {};
-  const b = equipment.boots  || {};
-  const g = equipment.gloves || {};
-
-  // multiplicative damage buffs
-  const mults = [];
-  if (buffs.pill) mults.push(1.60);
-  const ammoMult = { light: 1.10, ammo: 1.20, heavy: 1.40 }[buffs.ammo] || 1;
-  if (ammoMult > 1) mults.push(ammoMult);
-  const dmgBuff = mults.reduce((a, x) => a * x, 1);
-
-  const foodHP = { bread: 0.10, steak: 0.15, fish: 0.20 }[buffs.food] || 0;
-
-  const rArm = baseArm + (c.armor || 0) + (p.armor || 0);
-  const rDdg = baseDdg + (b.dodge || 0);
-
-  return {
-    atk: (baseAtk + (w.attack || 0)) * dmgBuff * (1 + rank/100) * (1 + political/100),
-    prc: basePrc + (g.precision || 0),
-    cc:  baseCC  + (w.critChance || 0),
-    cd:  baseCD  + (h.critDamage || 0),
-    armRaw: rArm, arm: diminishing(rArm),
-    ddgRaw: rDdg, ddg: diminishing(rDdg),
-    health: baseHP * (1 + foodHP),
-  };
+function pointsSpent(levels, keys) {
+  return keys.reduce((s, k) => s + pointsForLevel(levels[k] || 0), 0);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -584,7 +499,7 @@ async function resolveUserId(input) {
   if (!t) return null;
   // direct mongo id
   if (/^[a-f0-9]{24}$/i.test(t)) return t;
-  // search — response shape is { userIds: [...], muIds: [...], countryIds: [...], ... }
+  // search — response shape: { userIds: [...], muIds: [...], countryIds: [...], ... }
   const r = await trpc('search.searchAnything', { searchText: t });
   const userIds = r?.userIds || [];
   if (!userIds.length) return null;
@@ -592,81 +507,99 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  // company.getCompanies returns { items: [id1, id2, ...] } — IDs only, so
-  // we fan out to company.getById in parallel afterwards.
+  // First wave: needs only userId
   const [user, inventory, companyList] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
   ]);
 
-  let companies = null, companiesError = null;
-  if (companyList.status === 'fulfilled') {
-    const ids = companyList.value?.items || [];
-    try {
-      companies = await Promise.all(
-        ids.map(id => trpc('company.getById', { companyId: id }))
-      );
-    } catch (e) {
-      companiesError = String(e?.message || e);
-    }
-  } else {
-    companiesError = String(companyList.reason?.message || companyList.reason);
-  }
+  // Second wave: companies need IDs from companyList; country/mu need
+  // IDs from user. Fan out in one parallel batch.
+  const u = user.status === 'fulfilled' ? user.value : null;
+  const ids = companyList.status === 'fulfilled' ? (companyList.value?.items || []) : [];
+
+  const secondary = await Promise.allSettled([
+    ...ids.map(id => trpc('company.getById', { companyId: id })),
+    u?.country ? trpc('country.getCountryById', { countryId: u.country }) : Promise.resolve(null),
+    u?.mu ? trpc('mu.getById', { muId: u.mu }) : Promise.resolve(null),
+  ]);
+
+  const companies = secondary.slice(0, ids.length)
+    .filter(r => r.status === 'fulfilled')
+    .map(r => r.value);
+  const country = secondary[ids.length]?.status === 'fulfilled' ? secondary[ids.length].value : null;
+  const mu = secondary[ids.length + 1]?.status === 'fulfilled' ? secondary[ids.length + 1].value : null;
 
   return {
     userId,
-    user: user.status === 'fulfilled' ? user.value : null,
+    user: u,
     userError: user.status === 'rejected' ? String(user.reason?.message || user.reason) : null,
     inventory: inventory.status === 'fulfilled' ? inventory.value : null,
     inventoryError: inventory.status === 'rejected' ? String(inventory.reason?.message || inventory.reason) : null,
     companies,
-    companiesError,
+    companiesError: companyList.status === 'rejected' ? String(companyList.reason?.message || companyList.reason) : null,
+    country,
+    mu,
   };
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- *  EXTRACTION HELPERS
+ *  EXTRACTION
  *
- *  API field names aren't fully documented — try multiple shapes and
- *  fall back gracefully. Debug panel surfaces the raw response so
- *  unknown shapes are easy to spot.
+ *  user.skills[name] has shape:
+ *    { level, value, weapon, equipment, total, totalAfterSoftCap, ... }
+ *  We pull `.level` for the allocation table and `.total` (or
+ *  `.totalAfterSoftCap` for armor/dodge) for the derived-stats grid.
  * ═══════════════════════════════════════════════════════════════════ */
-function extractSkills(user) {
-  const s = user?.skills ?? user?.stats ?? user ?? {};
-  const n = k => s[k] ?? 0;
+function extractPlayer(data) {
+  const u = data.user || {};
+  const s = u.skills || {};
+  const lv = u.leveling || {};
+  const grab = (k, prop = 'level') => s[k]?.[prop] ?? 0;
   return {
-    energy: n('energy') || n('energyLevel'),
-    entrepreneurship: n('entrepreneurship') || n('entreLevel'),
-    production: n('production') || n('productionLevel'),
-    companies: n('companies') || n('companiesLimit'),
-    management: n('management') || n('managementLevel'),
-    attack: n('attack'),
-    precision: n('precision'),
-    critChance: n('critChance') || n('crit'),
-    critDamage: n('critDamage') || n('critDmg'),
-    armor: n('armor'),
-    dodge: n('dodge'),
-    health: n('health'),
-    loot: n('loot') || n('lootChance'),
-    hunger: n('hunger'),
+    userId: data.userId,
+    username: u.username || '?',
+    avatarUrl: u.avatarUrl,
+    level: lv.level ?? '?',
+    militaryRank: u.militaryRank,
+    totalSp: lv.totalSkillPoints ?? 0,
+    spentSp: lv.spentSkillPoints ?? 0,
+    availableSp: lv.availableSkillPoints ?? 0,
+    levels: Object.fromEntries(
+      [...FIGHT_KEYS, ...ECO_KEYS].map(k => [k, grab(k, 'level')])
+    ),
+    derived: {
+      atk: grab('attack', 'total'),
+      prc: grab('precision', 'total'),
+      cc: grab('criticalChance', 'total'),
+      cd: grab('criticalDamages', 'total'),
+      armRaw: grab('armor', 'total'),
+      arm: s.armor?.totalAfterSoftCap ?? s.armor?.total ?? 0,
+      ddgRaw: grab('dodge', 'total'),
+      ddg: s.dodge?.totalAfterSoftCap ?? s.dodge?.total ?? 0,
+      hp: grab('health', 'total') || 100,
+      loot: grab('lootChance', 'total'),
+      hunger: grab('hunger', 'total') || 4,
+    },
+    eco: {
+      energy: grab('energy', 'total'),
+      entrepreneurship: grab('entrepreneurship', 'total'),
+      production: grab('production', 'total'),
+      companies: grab('companies', 'total'),
+      management: grab('management', 'total'),
+    },
   };
 }
 
 function extractEquipment(inv) {
   const slot = key => {
     const p = inv?.[key];
-    if (!p || typeof p !== 'object') return null;
+    if (!p) return null;
     return {
-      itemCode: p.itemCode ?? p.item ?? p.code ?? '?',
-      durability: p.durability ?? null,
-      bonusPct: p.bonus ?? p.bonusPct ?? null,
-      attack: p.attack ?? p.stats?.attack ?? 0,
-      critChance: p.critChance ?? p.stats?.critChance ?? p.crit ?? 0,
-      critDamage: p.critDamage ?? p.stats?.critDamage ?? p.critDmg ?? 0,
-      armor: p.armor ?? p.stats?.armor ?? 0,
-      dodge: p.dodge ?? p.stats?.dodge ?? 0,
-      precision: p.precision ?? p.stats?.precision ?? 0,
+      code: p.code ?? '?',
+      durability: p.state != null ? Math.round((p.state / (p.maxState || 100)) * 100) : null,
+      skills: p.skills || {},
     };
   };
   return {
@@ -679,50 +612,57 @@ function extractEquipment(inv) {
   };
 }
 
-function extractCompanies(c) {
-  const items =
-    c?.items ?? c?.companies ?? c?.data ??
-    (Array.isArray(c) ? c : []);
-  return (items || []).map(co => ({
-    id: co._id ?? co.id,
+function extractCompanies(comps) {
+  const items = Array.isArray(comps) ? comps : [];
+  return items.map(co => ({
+    id: co._id,
     name: co.name ?? '?',
-    specialization: co.specialization ?? co.spec ?? co.item ?? co.production ?? '?',
-    aeLevel: co.automatedEngineLevel ?? co.aeLevel ?? co.automatedEngine ?? null,
-    productionBonus: co.productionBonus ?? co.bonus ?? null,
-    isActive: co.isActive ?? co.active ?? true,
+    itemCode: co.itemCode ?? '?',
+    aeLevel: co.activeUpgradeLevels?.automatedEngine ?? null,
+    storageLevel: co.activeUpgradeLevels?.storage ?? null,
+    breakRoomLevel: co.activeUpgradeLevels?.breakRoom ?? null,
+    production: co.production ?? null,
+    workerCount: co.workerCount ?? 0,
+    estimatedValue: co.estimatedValue ?? null,
   }));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  ECO MATH
+ *  formulas from TheGroxEmpire/warera-eco-simulator README
+ * ═══════════════════════════════════════════════════════════════════ */
+function actionsPerDay(bar, usagePct = 1) {
+  return Math.floor(bar / 10) * 2.4 * usagePct;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
  *  RENDER — PLAYER HEADER
  * ═══════════════════════════════════════════════════════════════════ */
 function renderPlayer(data) {
-  const u = data.user;
-  if (!u) {
-    setStatus('error', `Could not load user data. ${data.userError || ''}`);
+  if (!data.user) {
+    setStatus('error', `Could not load user. ${data.userError || ''}`);
     return;
   }
-
-  const username = u.username || u.name || '?';
-  const level = u.level ?? '?';
-  const country = u.country?.code || u.countryCode || u.nationality?.code || null;
-  const muName = u.mu?.name || u.militaryUnit?.name || null;
-  const avatar = u.avatar || u.avatarUrl || null;
+  const p = extractPlayer(data);
 
   const av = $('#avatar');
-  if (avatar) { av.src = avatar; av.hidden = false; }
+  if (p.avatarUrl) { av.src = p.avatarUrl; av.hidden = false; }
   else { av.hidden = true; }
-
-  $('#player-name').textContent = username;
+  $('#player-name').textContent = p.username;
 
   const meta = [];
-  meta.push(`<span class="pill">Level <span class="mono">${escapeHtml(level)}</span></span>`);
-  if (country) meta.push(`<span class="pill">${flag(country)} ${escapeHtml(country.toUpperCase())}</span>`);
+  meta.push(`<span class="pill">Level <span class="mono">${p.level}</span></span>`);
+  const cc = data.country?.code;
+  if (cc) meta.push(`<span class="pill">${flag(cc)} ${escapeHtml(cc.toUpperCase())}</span>`);
+  const muName = data.mu?.name;
   if (muName) meta.push(`<span class="pill">${escapeHtml(muName)}</span>`);
+  if (p.militaryRank != null) {
+    meta.push(`<span class="pill">MR <span class="mono">${p.militaryRank}</span></span>`);
+  }
   $('#player-meta').innerHTML = meta.join(' ');
 
-  renderCombat(data);
-  renderEconomy(data);
+  renderCombat(p, data);
+  renderEconomy(p, data);
 
   if (DEBUG) {
     $('#debug-panel').classList.remove('hidden');
@@ -731,6 +671,8 @@ function renderPlayer(data) {
       user: data.user,
       inventory: data.inventory,
       companies: data.companies,
+      country: data.country,
+      mu: data.mu,
       errors: {
         user: data.userError,
         inventory: data.inventoryError,
@@ -745,21 +687,15 @@ function renderPlayer(data) {
 /* ═══════════════════════════════════════════════════════════════════
  *  RENDER — COMBAT CARD
  * ═══════════════════════════════════════════════════════════════════ */
-function renderCombat(data) {
+function renderCombat(p, data) {
   if (data.inventoryError) {
     $('#combat-content').innerHTML = `<p class="muted">Could not load equipment: <code>${escapeHtml(data.inventoryError)}</code></p>`;
     return;
   }
 
-  const skills = extractSkills(data.user);
   const eq = extractEquipment(data.inventory);
-
-  const d = computeDerived({
-    fightSkills: skills, equipment: eq, buffs: {}, rank: 0, political: 0,
-  });
-
-  const fightSp = skills.attack + skills.precision + skills.critChance + skills.critDamage
-    + skills.armor + skills.dodge + skills.health + skills.loot + skills.hunger;
+  const d = p.derived;
+  const fightPts = pointsSpent(p.levels, FIGHT_KEYS);
 
   $('#combat-content').innerHTML = `
     <div class="stats">
@@ -767,23 +703,23 @@ function renderCombat(data) {
       <div class="stat"><span class="stat-label">Prc</span><span class="stat-value">${fmtInt(d.prc)}%</span></div>
       <div class="stat"><span class="stat-label">CC</span><span class="stat-value">${fmtInt(d.cc)}%</span></div>
       <div class="stat"><span class="stat-label">CD</span><span class="stat-value">${fmtInt(d.cd)}%</span></div>
-      <div class="stat"><span class="stat-label">Arm</span><span class="stat-value">${fmt(d.arm, 1)}%</span></div>
-      <div class="stat"><span class="stat-label">Ddg</span><span class="stat-value">${fmt(d.ddg, 1)}%</span></div>
-      <div class="stat"><span class="stat-label">HP</span><span class="stat-value">${fmtInt(d.health)}</span></div>
+      <div class="stat"><span class="stat-label">Arm</span><span class="stat-value">${fmtInt(d.arm)}%</span></div>
+      <div class="stat"><span class="stat-label">Ddg</span><span class="stat-value">${fmtInt(d.ddg)}%</span></div>
+      <div class="stat"><span class="stat-label">HP</span><span class="stat-value">${fmtInt(d.hp)}</span></div>
     </div>
 
     <div class="section">
-      <div class="section-label">Fight skills · ${fightSp} pts spent</div>
+      <div class="section-label">Fight skills · ${fightPts}/${p.spentSp + p.availableSp} pts</div>
       <div class="skills">
-        ${skillRow('🗡️ Attack', skills.attack)}
-        ${skillRow('🎯 Precision', skills.precision)}
-        ${skillRow('✨ Crit chance', skills.critChance)}
-        ${skillRow('💥 Crit damage', skills.critDamage)}
-        ${skillRow('🛡️ Armor', skills.armor)}
-        ${skillRow('💨 Dodge', skills.dodge)}
-        ${skillRow('❤️ Health', skills.health)}
-        ${skillRow('💼 Loot', skills.loot)}
-        ${skillRow('🍔 Hunger', skills.hunger)}
+        ${skillRow('🗡️ Attack', p.levels.attack)}
+        ${skillRow('🎯 Precision', p.levels.precision)}
+        ${skillRow('✨ Crit chance', p.levels.criticalChance)}
+        ${skillRow('💥 Crit damage', p.levels.criticalDamages)}
+        ${skillRow('🛡️ Armor', p.levels.armor)}
+        ${skillRow('💨 Dodge', p.levels.dodge)}
+        ${skillRow('❤️ Health', p.levels.health)}
+        ${skillRow('💼 Loot', p.levels.lootChance)}
+        ${skillRow('🍔 Hunger', p.levels.hunger)}
       </div>
     </div>
 
@@ -791,8 +727,6 @@ function renderCombat(data) {
       <div class="section-label">Equipped gear</div>
       ${equipmentTable(eq)}
     </div>
-
-    <div class="note">No active buffs assumed. Pill/ammo/food multipliers will fold in once build presets land.</div>
   `;
   $('#combat-badge').textContent = `${fmtInt(d.atk)} atk`;
 }
@@ -801,27 +735,42 @@ function skillRow(label, value) {
   return `<div class="skill"><span class="skill-name">${label}</span><span class="skill-value">${value}</span></div>`;
 }
 
+/* Equipment table: each slot maps to which stats matter. We read
+ * `slot.skills.{statKey}` from the API and display the value with a
+ * short label (atk, cc, cd, arm, ddg, prc). */
+const STAT_LABELS = {
+  attack: 'atk',
+  criticalChance: 'cc',
+  criticalDamages: 'cd',
+  armor: 'arm',
+  dodge: 'ddg',
+  precision: 'prc',
+};
+
 function equipmentTable(eq) {
   const slots = [
-    ['weapon', '🗡️ Weapon', 'attack', 'atk'],
-    ['helmet', '⛑️ Helmet', 'critDamage', 'cd'],
-    ['chest',  '🦺 Chest',  'armor', 'arm'],
-    ['pants',  '👖 Pants',  'armor', 'arm'],
-    ['boots',  '👢 Boots',  'dodge', 'ddg'],
-    ['gloves', '🧤 Gloves', 'precision', 'prc'],
+    ['weapon', '🗡️ Weapon', ['attack', 'criticalChance']],
+    ['helmet', '⛑️ Helmet', ['criticalDamages']],
+    ['chest',  '🦺 Chest',  ['armor']],
+    ['pants',  '👖 Pants',  ['armor']],
+    ['boots',  '👢 Boots',  ['dodge']],
+    ['gloves', '🧤 Gloves', ['precision']],
   ];
-  const rows = slots.map(([key, label, statKey, statName]) => {
-    const p = eq[key];
-    const stat = p?.[statKey];
-    if (!p || (!stat && !p.attack && !p.armor && !p.dodge && !p.precision && !p.critChance && !p.critDamage)) {
-      return `<tr class="empty"><td>${label}</td><td colspan="3">empty</td></tr>`;
-    }
-    const actualStat = stat || p.attack || p.armor || p.dodge || p.precision || p.critChance || p.critDamage;
+  const rows = slots.map(([key, label, statKeys]) => {
+    const item = eq[key];
+    if (!item) return `<tr class="empty"><td>${label}</td><td colspan="3">empty</td></tr>`;
+    const statStr = statKeys
+      .map(sk => {
+        const v = item.skills[sk];
+        return v ? `${fmtInt(v)} ${STAT_LABELS[sk] || sk}` : null;
+      })
+      .filter(Boolean)
+      .join(', ') || '–';
     return `<tr>
       <td>${label}</td>
-      <td class="mono">${escapeHtml(p.itemCode)}</td>
-      <td class="num">${fmt(actualStat, 0)} ${statName}</td>
-      <td class="num">${p.durability != null ? fmtInt(p.durability) + '%' : '–'}</td>
+      <td class="mono">${escapeHtml(item.code)}</td>
+      <td class="num">${statStr}</td>
+      <td class="num">${item.durability != null ? fmtInt(item.durability) + '%' : '–'}</td>
     </tr>`;
   });
   return `<table class="list">
@@ -833,50 +782,42 @@ function equipmentTable(eq) {
 /* ═══════════════════════════════════════════════════════════════════
  *  RENDER — ECONOMY CARD
  * ═══════════════════════════════════════════════════════════════════ */
-function renderEconomy(data) {
+function renderEconomy(p, data) {
   if (data.companiesError) {
     $('#economy-content').innerHTML = `<p class="muted">Could not load companies: <code>${escapeHtml(data.companiesError)}</code></p>`;
     return;
   }
 
-  const skills = extractSkills(data.user);
   const comps = extractCompanies(data.companies);
+  const eco = p.eco;
+  const ecoPts = pointsSpent(p.levels, ECO_KEYS);
 
-  const energy   = ecoStat('energy', skills.energy);
-  const entre    = ecoStat('entrepreneurship', skills.entrepreneurship);
-  const prod     = ecoStat('production', skills.production);
-  const cosLim   = ecoStat('companies', skills.companies);
-  const mgmt     = ecoStat('management', skills.management);
-
-  const ecoSp = skills.energy + skills.entrepreneurship + skills.production
-    + skills.companies + skills.management;
-
-  // raw PP/day (formulas from GroxEmpire README)
+  // Daily raw PP — formulas from GroxEmpire eco-sim README.
   // work actions/day = floor(energyBar/10) × 2.4 × usage
-  // raw PP/day = actions × production stat
-  const workActions = actionsPerDay(energy, 1);
-  const workPP = workActions * prod;
-  const entreSlots = Math.floor(entre / 10); // self-work slots per 10h
-  const entreActions = actionsPerDay(entre, 1);
-  const entrePP = entreActions * prod;
+  // raw PP/day = actions × Production stat
+  const workActions = actionsPerDay(eco.energy, 1);
+  const workPP = workActions * eco.production;
+  const entreSlots = Math.floor(eco.entrepreneurship / 10);
+  const entreActions = actionsPerDay(eco.entrepreneurship, 1);
+  const entrePP = entreActions * eco.production;
 
   $('#economy-content').innerHTML = `
     <div class="stats">
-      <div class="stat"><span class="stat-label">Energy</span><span class="stat-value">${energy}</span></div>
-      <div class="stat"><span class="stat-label">Entre</span><span class="stat-value">${entre}</span></div>
-      <div class="stat"><span class="stat-label">Prod</span><span class="stat-value">${prod}</span></div>
-      <div class="stat"><span class="stat-label">Cos lim</span><span class="stat-value">${cosLim}</span></div>
-      <div class="stat"><span class="stat-label">Mgmt</span><span class="stat-value">${mgmt}</span></div>
+      <div class="stat"><span class="stat-label">Energy</span><span class="stat-value">${eco.energy}</span></div>
+      <div class="stat"><span class="stat-label">Entre</span><span class="stat-value">${eco.entrepreneurship}</span></div>
+      <div class="stat"><span class="stat-label">Prod</span><span class="stat-value">${eco.production}</span></div>
+      <div class="stat"><span class="stat-label">Cos lim</span><span class="stat-value">${eco.companies}</span></div>
+      <div class="stat"><span class="stat-label">Mgmt</span><span class="stat-value">${eco.management}</span></div>
     </div>
 
     <div class="section">
-      <div class="section-label">Eco skills · ${ecoSp} pts spent</div>
+      <div class="section-label">Eco skills · ${ecoPts}/${p.spentSp + p.availableSp} pts</div>
       <div class="skills">
-        ${skillRow('⚡ Energy', skills.energy)}
-        ${skillRow('💼 Entrepreneurship', skills.entrepreneurship)}
-        ${skillRow('🏭 Production', skills.production)}
-        ${skillRow('🏢 Companies', skills.companies)}
-        ${skillRow('👤 Management', skills.management)}
+        ${skillRow('⚡ Energy', p.levels.energy)}
+        ${skillRow('💼 Entrepreneurship', p.levels.entrepreneurship)}
+        ${skillRow('🏭 Production', p.levels.production)}
+        ${skillRow('🏢 Companies', p.levels.companies)}
+        ${skillRow('👤 Management', p.levels.management)}
       </div>
     </div>
 
@@ -885,7 +826,7 @@ function renderEconomy(data) {
       <div class="skills">
         <div class="skill">
           <span class="skill-name">Work (energy → PP)</span>
-          <span class="skill-value">${fmt(workPP, 1)} <span class="sub">${fmt(workActions, 1)} actions × ${prod}</span></span>
+          <span class="skill-value">${fmt(workPP, 1)} <span class="sub">${fmt(workActions, 1)} × ${eco.production}</span></span>
         </div>
         <div class="skill">
           <span class="skill-name">Self-work (entre)</span>
@@ -895,13 +836,13 @@ function renderEconomy(data) {
     </div>
 
     <div class="section">
-      <div class="section-label">Factories · ${comps.length}/${cosLim}</div>
+      <div class="section-label">Factories · ${comps.length}/${eco.companies}</div>
       ${companiesTable(comps)}
     </div>
 
     <div class="note">Net profit (factory revenue, ingredient costs, market prices, wage) lands with build presets next.</div>
   `;
-  $('#economy-badge').textContent = `${comps.length}/${cosLim} factories`;
+  $('#economy-badge').textContent = `${comps.length}/${eco.companies} factories`;
 }
 
 function companiesTable(comps) {
@@ -911,13 +852,14 @@ function companiesTable(comps) {
   const rows = comps.map(c => `
     <tr>
       <td>${escapeHtml(c.name)}</td>
-      <td class="mono">${escapeHtml(c.specialization)}</td>
+      <td class="mono">${escapeHtml(c.itemCode)}</td>
       <td class="num">${c.aeLevel != null ? 'AE ' + c.aeLevel : '–'}</td>
-      <td class="num">${c.productionBonus != null ? fmt(c.productionBonus, 1) + '%' : '–'}</td>
+      <td class="num">${c.workerCount}</td>
+      <td class="num">${c.production != null ? fmt(c.production, 1) : '–'}</td>
     </tr>
   `);
   return `<table class="list">
-    <thead><tr><th>Name</th><th>Spec</th><th>AE</th><th>Bonus</th></tr></thead>
+    <thead><tr><th>Name</th><th>Item</th><th>AE</th><th>👷</th><th>Stored</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 }

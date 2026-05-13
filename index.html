@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>War Readiness · we-ie.com</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --surface: #14181d;
+    --surface-2: #1c2128;
+    --border: #2a313a;
+    --border-strong: #3a424d;
+    --text: #e8ecf0;
+    --dim: #98a2b0;
+    --dimmer: #6b7480;
+    --accent: #4ad395;
+    --accent-soft: rgba(74, 211, 149, 0.12);
+    --warn: #f0c14b;
+    --error: #f06060;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-size: 15px;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .topbar-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0.9rem 1.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .brand .accent { color: var(--accent); }
+  .brand .sub {
+    color: var(--dimmer);
+    font-size: 0.85rem;
+  }
+
+  /* MAIN */
+  main {
+    flex: 1;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+
+  /* SEARCH */
+  .search-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .search-row input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.6rem 0.85rem;
+    border-radius: 6px;
+    font: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-row input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .search-row button {
+    background: var(--accent);
+    border: 0;
+    color: #07120c;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .search-row button:hover:not(:disabled) { background: #5fdfa6; }
+  .search-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    min-height: 1.3rem;
+    font-size: 0.85rem;
+    color: var(--dim);
+    margin-bottom: 1rem;
+  }
+  .status.error { color: var(--error); }
+  .status.ok { color: var(--accent); }
+
+  /* PLAYER HEAD */
+  .player-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+  }
+  .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    flex-shrink: 0;
+    object-fit: cover;
+  }
+  .player-name {
+    margin: 0 0 0.2rem 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  .player-meta { margin: 0; font-size: 0.9rem; color: var(--dim); }
+  .pill {
+    display: inline-block;
+    padding: 0.1rem 0.55rem;
+    background: var(--surface-2);
+    border-radius: 4px;
+    margin-right: 0.35rem;
+    font-size: 0.8rem;
+  }
+  .pill .mono { font-family: var(--mono); }
+
+  /* GRID */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+  }
+  .card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-family: var(--mono);
+  }
+
+  /* STATS GRID */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1.1rem;
+  }
+  .stat {
+    background: var(--surface-2);
+    border-radius: 6px;
+    padding: 0.5rem 0.55rem;
+    text-align: center;
+  }
+  .stat-label {
+    display: block;
+    color: var(--dimmer);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.2rem;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  /* SECTIONS WITHIN CARD */
+  .section { margin-top: 1rem; }
+  .section:first-child { margin-top: 0; }
+  .section-label {
+    text-transform: uppercase;
+    color: var(--dimmer);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.45rem;
+    font-weight: 500;
+  }
+
+  .skills {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+  }
+  .skill {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0.55rem;
+    background: var(--surface-2);
+    border-radius: 4px;
+  }
+  .skill-name { color: var(--dim); }
+  .skill-value {
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+  .skill .sub {
+    color: var(--dimmer);
+    font-size: 0.78rem;
+    margin-left: 0.4rem;
+  }
+
+  /* TABLES */
+  table.list {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  table.list th, table.list td {
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  table.list th {
+    color: var(--dimmer);
+    font-weight: 500;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  table.list td.mono { font-family: var(--mono); }
+  table.list td.num { text-align: right; font-family: var(--mono); }
+  table.list tr:last-child td { border-bottom: 0; }
+  table.list tr.empty td { color: var(--dimmer); font-style: italic; }
+
+  .note {
+    font-size: 0.8rem;
+    color: var(--dimmer);
+    font-style: italic;
+    margin-top: 0.9rem;
+  }
+  .hidden { display: none !important; }
+  .muted { color: var(--dim); }
+
+  /* RAW DEBUG */
+  details.debug {
+    margin-top: 1rem;
+    padding: 0.6rem 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  details.debug summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--dim);
+  }
+  details.debug pre {
+    margin: 0.6rem 0 0;
+    overflow: auto;
+    background: var(--bg);
+    padding: 0.6rem;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--dim);
+    max-height: 400px;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    color: var(--dim);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  footer .sep { margin: 0 0.5rem; color: var(--border-strong); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <h1>War <span class="accent">Readiness</span></h1>
+    </div>
+    <span class="brand sub">build planner for warera.io · v0.1</span>
+  </div>
+</div>
+
+<main>
+  <div class="search-row">
+    <input id="username" placeholder="warera username..." autocomplete="off" spellcheck="false">
+    <button id="load-btn">Load profile</button>
+  </div>
+  <div id="status" class="status"></div>
+
+  <div id="player" class="hidden">
+    <div class="player-head">
+      <img id="avatar" class="avatar" alt="" hidden>
+      <div>
+        <h2 id="player-name" class="player-name"></h2>
+        <p id="player-meta" class="player-meta"></p>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Combat <span class="badge" id="combat-badge"></span></h3>
+        <div id="combat-content"></div>
+      </div>
+      <div class="card">
+        <h3>Economy <span class="badge" id="economy-badge"></span></h3>
+        <div id="economy-content"></div>
+      </div>
+    </div>
+
+    <details class="debug hidden" id="debug-panel">
+      <summary>Raw API responses (debug mode)</summary>
+      <pre id="debug-content"></pre>
+    </details>
+  </div>
+</main>
+
+<footer>
+  Made with <span style="color: var(--accent);">♥</span> by toie.
+  <span class="sep">·</span>
+  Data via <a href="https://gateway.warerastats.io/" target="_blank" rel="noopener">War Era Gateway</a>.
+  <span class="sep">·</span>
+  Sibling of <a href="https://tools.we-ie.com/" target="_blank" rel="noopener">tools.we-ie.com</a>.
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+ *  CONFIG
+ * ═══════════════════════════════════════════════════════════════════ */
+const CFG = {
+  API: 'https://warera-proxy.toie.workers.dev/trpc',
+  GAME: 'https://app.warera.io',
+};
+const QS = new URLSearchParams(location.search);
+const DEBUG = QS.has('debug');
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  UTILITIES
+ * ═══════════════════════════════════════════════════════════════════ */
+const $ = sel => document.querySelector(sel);
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmt(n, d = 2) {
+  if (n == null || isNaN(n)) return '–';
+  return Number(n).toLocaleString(undefined, {
+    minimumFractionDigits: d, maximumFractionDigits: d
+  });
+}
+function fmtInt(n) {
+  if (n == null || isNaN(n)) return '–';
+  return Math.round(Number(n)).toLocaleString();
+}
+function flag(code) {
+  if (!code || code.length !== 2) return '🏳️';
+  return code.toUpperCase().split('').map(c =>
+    String.fromCodePoint(c.charCodeAt(0) - 65 + 0x1F1E6)
+  ).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  TRPC CLIENT
+ *
+ *  The Gateway / proxy speaks tRPC. Response is one of:
+ *    { result: { data: { json: <data> } } }     superjson
+ *    { result: { data: <data> } }               plain
+ *    <data>                                     bare
+ *  We unwrap with fallback so all three shapes work.
+ * ═══════════════════════════════════════════════════════════════════ */
+async function trpc(endpoint, params = {}) {
+  const input = encodeURIComponent(JSON.stringify({ json: params }));
+  const url = `${CFG.API}/${endpoint}?input=${input}`;
+  if (DEBUG) console.log(`→ ${endpoint}`, params);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${endpoint} HTTP ${res.status}`);
+  const json = await res.json();
+  if (DEBUG) console.log(`← ${endpoint}`, json);
+  if (json?.error) throw new Error(`${endpoint}: ${json.error.message || 'error'}`);
+  const d = json?.result?.data;
+  return d?.json ?? d ?? json;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  GAME CONSTANTS
+ *
+ *  Eco bases verified against toie level-18 screenshot (Image 12):
+ *    Energy lvl 6  → 90 displayed   ⟹ base 30 + 6×10
+ *    Entre  lvl 5  → 55 displayed   ⟹ base 30 + 5×5
+ *    Prod   lvl 6  → 28 displayed   ⟹ base 10 + 6×3
+ *    Cos    lvl 5  → 7  displayed   ⟹ base 2  + 5×1
+ *    Mgmt   lvl 0  → 4  displayed   ⟹ base 4
+ *
+ *  Fight bases from in-game tooltips (Image 11). Per-level fight-skill
+ *  gains are TBD — placeholders below until calibrated against donuz's
+ *  netlify sim by clicking +/- once per skill.
+ * ═══════════════════════════════════════════════════════════════════ */
+const ECO_BASE = { energy: 30, entrepreneurship: 30, production: 10, companies: 2, management: 4 };
+const ECO_GAIN = { energy: 10, entrepreneurship: 5, production: 3, companies: 1, management: 2 };
+const FIGHT_BASE = {
+  attack: 100, precision: 50, critChance: 10, critDamage: 100,
+  armor: 0, dodge: 0, health: 100, loot: 5, hunger: 4,
+};
+const FIGHT_GAIN = {
+  attack: 0, precision: 0, critChance: 0, critDamage: 0,
+  armor: 0, dodge: 0, health: 0, loot: 0, hunger: 0,
+};
+const DR_K = 40; // diminishing-returns constant for armor/dodge
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  ECO MATH (formulas: TheGroxEmpire/warera-eco-simulator README)
+ * ═══════════════════════════════════════════════════════════════════ */
+function ecoStat(name, level) {
+  return (ECO_BASE[name] || 0) + (ECO_GAIN[name] || 0) * (level || 0);
+}
+function actionsPerDay(bar, usagePct = 1) {
+  return Math.floor(bar / 10) * 2.4 * usagePct;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  BATTLE MATH (derived stats verified vs Image 5: toie atk 401)
+ *    Atk = (base + weapon) × ∏(1 + buff%) × (1 + rank%) × (1 + pol%)
+ *    Prc, CC, CD: additive (base + gear)
+ *    Arm, Ddg: raw / (raw + 40) displayed %
+ * ═══════════════════════════════════════════════════════════════════ */
+function diminishing(raw) { return raw / (raw + DR_K) * 100; }
+
+function computeDerived({ fightSkills = {}, equipment = {}, buffs = {}, rank = 0, political = 0 }) {
+  const fs = fightSkills;
+  const baseAtk = FIGHT_BASE.attack + (fs.attack || 0) * FIGHT_GAIN.attack;
+  const basePrc = FIGHT_BASE.precision + (fs.precision || 0) * FIGHT_GAIN.precision;
+  const baseCC  = FIGHT_BASE.critChance + (fs.critChance || 0) * FIGHT_GAIN.critChance;
+  const baseCD  = FIGHT_BASE.critDamage + (fs.critDamage || 0) * FIGHT_GAIN.critDamage;
+  const baseArm = FIGHT_BASE.armor + (fs.armor || 0) * FIGHT_GAIN.armor;
+  const baseDdg = FIGHT_BASE.dodge + (fs.dodge || 0) * FIGHT_GAIN.dodge;
+  const baseHP  = FIGHT_BASE.health + (fs.health || 0) * FIGHT_GAIN.health;
+
+  const w = equipment.weapon || {};
+  const h = equipment.helmet || {};
+  const c = equipment.chest  || {};
+  const p = equipment.pants  || {};
+  const b = equipment.boots  || {};
+  const g = equipment.gloves || {};
+
+  // multiplicative damage buffs
+  const mults = [];
+  if (buffs.pill) mults.push(1.60);
+  const ammoMult = { light: 1.10, ammo: 1.20, heavy: 1.40 }[buffs.ammo] || 1;
+  if (ammoMult > 1) mults.push(ammoMult);
+  const dmgBuff = mults.reduce((a, x) => a * x, 1);
+
+  const foodHP = { bread: 0.10, steak: 0.15, fish: 0.20 }[buffs.food] || 0;
+
+  const rArm = baseArm + (c.armor || 0) + (p.armor || 0);
+  const rDdg = baseDdg + (b.dodge || 0);
+
+  return {
+    atk: (baseAtk + (w.attack || 0)) * dmgBuff * (1 + rank/100) * (1 + political/100),
+    prc: basePrc + (g.precision || 0),
+    cc:  baseCC  + (w.critChance || 0),
+    cd:  baseCD  + (h.critDamage || 0),
+    armRaw: rArm, arm: diminishing(rArm),
+    ddgRaw: rDdg, ddg: diminishing(rDdg),
+    health: baseHP * (1 + foodHP),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  DATA LOAD
+ * ═══════════════════════════════════════════════════════════════════ */
+async function resolveUserId(input) {
+  const t = input.trim();
+  if (!t) return null;
+  // direct mongo id
+  if (/^[a-f0-9]{24}$/i.test(t)) return t;
+  // search
+  const r = await trpc('search.searchAnything', { searchText: t });
+  // multiple shape guesses — pick whichever yields users
+  const users =
+    r?.users ??
+    r?.results?.users ??
+    (Array.isArray(r) ? r.filter(x => x.type === 'user' || x.username) : []) ??
+    [];
+  if (!users.length) return null;
+  const exact = users.find(u =>
+    (u.username || u.name || '').toLowerCase() === t.toLowerCase()
+  );
+  const pick = exact || users[0];
+  return pick._id || pick.id || null;
+}
+
+async function loadPlayer(userId) {
+  const [user, inventory, companies] = await Promise.allSettled([
+    trpc('user.getUserById', { userId }),
+    trpc('inventory.fetchCurrentEquipment', { userId }),
+    trpc('company.getCompanies', { userId, perPage: 50 }),
+  ]);
+  return {
+    userId,
+    user: user.status === 'fulfilled' ? user.value : null,
+    userError: user.status === 'rejected' ? String(user.reason?.message || user.reason) : null,
+    inventory: inventory.status === 'fulfilled' ? inventory.value : null,
+    inventoryError: inventory.status === 'rejected' ? String(inventory.reason?.message || inventory.reason) : null,
+    companies: companies.status === 'fulfilled' ? companies.value : null,
+    companiesError: companies.status === 'rejected' ? String(companies.reason?.message || companies.reason) : null,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  EXTRACTION HELPERS
+ *
+ *  API field names aren't fully documented — try multiple shapes and
+ *  fall back gracefully. Debug panel surfaces the raw response so
+ *  unknown shapes are easy to spot.
+ * ═══════════════════════════════════════════════════════════════════ */
+function extractSkills(user) {
+  const s = user?.skills ?? user?.stats ?? user ?? {};
+  const n = k => s[k] ?? 0;
+  return {
+    energy: n('energy') || n('energyLevel'),
+    entrepreneurship: n('entrepreneurship') || n('entreLevel'),
+    production: n('production') || n('productionLevel'),
+    companies: n('companies') || n('companiesLimit'),
+    management: n('management') || n('managementLevel'),
+    attack: n('attack'),
+    precision: n('precision'),
+    critChance: n('critChance') || n('crit'),
+    critDamage: n('critDamage') || n('critDmg'),
+    armor: n('armor'),
+    dodge: n('dodge'),
+    health: n('health'),
+    loot: n('loot') || n('lootChance'),
+    hunger: n('hunger'),
+  };
+}
+
+function extractEquipment(inv) {
+  const slot = key => {
+    const p = inv?.[key];
+    if (!p || typeof p !== 'object') return null;
+    return {
+      itemCode: p.itemCode ?? p.item ?? p.code ?? '?',
+      durability: p.durability ?? null,
+      bonusPct: p.bonus ?? p.bonusPct ?? null,
+      attack: p.attack ?? p.stats?.attack ?? 0,
+      critChance: p.critChance ?? p.stats?.critChance ?? p.crit ?? 0,
+      critDamage: p.critDamage ?? p.stats?.critDamage ?? p.critDmg ?? 0,
+      armor: p.armor ?? p.stats?.armor ?? 0,
+      dodge: p.dodge ?? p.stats?.dodge ?? 0,
+      precision: p.precision ?? p.stats?.precision ?? 0,
+    };
+  };
+  return {
+    weapon: slot('weapon'),
+    helmet: slot('helmet'),
+    chest: slot('chest'),
+    pants: slot('pants'),
+    boots: slot('boots'),
+    gloves: slot('gloves'),
+  };
+}
+
+function extractCompanies(c) {
+  const items =
+    c?.items ?? c?.companies ?? c?.data ??
+    (Array.isArray(c) ? c : []);
+  return (items || []).map(co => ({
+    id: co._id ?? co.id,
+    name: co.name ?? '?',
+    specialization: co.specialization ?? co.spec ?? co.item ?? co.production ?? '?',
+    aeLevel: co.automatedEngineLevel ?? co.aeLevel ?? co.automatedEngine ?? null,
+    productionBonus: co.productionBonus ?? co.bonus ?? null,
+    isActive: co.isActive ?? co.active ?? true,
+  }));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  RENDER — PLAYER HEADER
+ * ═══════════════════════════════════════════════════════════════════ */
+function renderPlayer(data) {
+  const u = data.user;
+  if (!u) {
+    setStatus('error', `Could not load user data. ${data.userError || ''}`);
+    return;
+  }
+
+  const username = u.username || u.name || '?';
+  const level = u.level ?? '?';
+  const country = u.country?.code || u.countryCode || u.nationality?.code || null;
+  const muName = u.mu?.name || u.militaryUnit?.name || null;
+  const avatar = u.avatar || u.avatarUrl || null;
+
+  const av = $('#avatar');
+  if (avatar) { av.src = avatar; av.hidden = false; }
+  else { av.hidden = true; }
+
+  $('#player-name').textContent = username;
+
+  const meta = [];
+  meta.push(`<span class="pill">Level <span class="mono">${escapeHtml(level)}</span></span>`);
+  if (country) meta.push(`<span class="pill">${flag(country)} ${escapeHtml(country.toUpperCase())}</span>`);
+  if (muName) meta.push(`<span class="pill">${escapeHtml(muName)}</span>`);
+  $('#player-meta').innerHTML = meta.join(' ');
+
+  renderCombat(data);
+  renderEconomy(data);
+
+  if (DEBUG) {
+    $('#debug-panel').classList.remove('hidden');
+    $('#debug-content').textContent = JSON.stringify({
+      userId: data.userId,
+      user: data.user,
+      inventory: data.inventory,
+      companies: data.companies,
+      errors: {
+        user: data.userError,
+        inventory: data.inventoryError,
+        companies: data.companiesError,
+      }
+    }, null, 2);
+  }
+
+  $('#player').classList.remove('hidden');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  RENDER — COMBAT CARD
+ * ═══════════════════════════════════════════════════════════════════ */
+function renderCombat(data) {
+  if (data.inventoryError) {
+    $('#combat-content').innerHTML = `<p class="muted">Could not load equipment: <code>${escapeHtml(data.inventoryError)}</code></p>`;
+    return;
+  }
+
+  const skills = extractSkills(data.user);
+  const eq = extractEquipment(data.inventory);
+
+  const d = computeDerived({
+    fightSkills: skills, equipment: eq, buffs: {}, rank: 0, political: 0,
+  });
+
+  const fightSp = skills.attack + skills.precision + skills.critChance + skills.critDamage
+    + skills.armor + skills.dodge + skills.health + skills.loot + skills.hunger;
+
+  $('#combat-content').innerHTML = `
+    <div class="stats">
+      <div class="stat"><span class="stat-label">Atk</span><span class="stat-value">${fmtInt(d.atk)}</span></div>
+      <div class="stat"><span class="stat-label">Prc</span><span class="stat-value">${fmtInt(d.prc)}%</span></div>
+      <div class="stat"><span class="stat-label">CC</span><span class="stat-value">${fmtInt(d.cc)}%</span></div>
+      <div class="stat"><span class="stat-label">CD</span><span class="stat-value">${fmtInt(d.cd)}%</span></div>
+      <div class="stat"><span class="stat-label">Arm</span><span class="stat-value">${fmt(d.arm, 1)}%</span></div>
+      <div class="stat"><span class="stat-label">Ddg</span><span class="stat-value">${fmt(d.ddg, 1)}%</span></div>
+      <div class="stat"><span class="stat-label">HP</span><span class="stat-value">${fmtInt(d.health)}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Fight skills · ${fightSp} pts spent</div>
+      <div class="skills">
+        ${skillRow('🗡️ Attack', skills.attack)}
+        ${skillRow('🎯 Precision', skills.precision)}
+        ${skillRow('✨ Crit chance', skills.critChance)}
+        ${skillRow('💥 Crit damage', skills.critDamage)}
+        ${skillRow('🛡️ Armor', skills.armor)}
+        ${skillRow('💨 Dodge', skills.dodge)}
+        ${skillRow('❤️ Health', skills.health)}
+        ${skillRow('💼 Loot', skills.loot)}
+        ${skillRow('🍔 Hunger', skills.hunger)}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Equipped gear</div>
+      ${equipmentTable(eq)}
+    </div>
+
+    <div class="note">No active buffs assumed. Pill/ammo/food multipliers will fold in once build presets land.</div>
+  `;
+  $('#combat-badge').textContent = `${fmtInt(d.atk)} atk`;
+}
+
+function skillRow(label, value) {
+  return `<div class="skill"><span class="skill-name">${label}</span><span class="skill-value">${value}</span></div>`;
+}
+
+function equipmentTable(eq) {
+  const slots = [
+    ['weapon', '🗡️ Weapon', 'attack', 'atk'],
+    ['helmet', '⛑️ Helmet', 'critDamage', 'cd'],
+    ['chest',  '🦺 Chest',  'armor', 'arm'],
+    ['pants',  '👖 Pants',  'armor', 'arm'],
+    ['boots',  '👢 Boots',  'dodge', 'ddg'],
+    ['gloves', '🧤 Gloves', 'precision', 'prc'],
+  ];
+  const rows = slots.map(([key, label, statKey, statName]) => {
+    const p = eq[key];
+    const stat = p?.[statKey];
+    if (!p || (!stat && !p.attack && !p.armor && !p.dodge && !p.precision && !p.critChance && !p.critDamage)) {
+      return `<tr class="empty"><td>${label}</td><td colspan="3">empty</td></tr>`;
+    }
+    const actualStat = stat || p.attack || p.armor || p.dodge || p.precision || p.critChance || p.critDamage;
+    return `<tr>
+      <td>${label}</td>
+      <td class="mono">${escapeHtml(p.itemCode)}</td>
+      <td class="num">${fmt(actualStat, 0)} ${statName}</td>
+      <td class="num">${p.durability != null ? fmtInt(p.durability) + '%' : '–'}</td>
+    </tr>`;
+  });
+  return `<table class="list">
+    <thead><tr><th>Slot</th><th>Item</th><th>Stat</th><th>Dur</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  RENDER — ECONOMY CARD
+ * ═══════════════════════════════════════════════════════════════════ */
+function renderEconomy(data) {
+  if (data.companiesError) {
+    $('#economy-content').innerHTML = `<p class="muted">Could not load companies: <code>${escapeHtml(data.companiesError)}</code></p>`;
+    return;
+  }
+
+  const skills = extractSkills(data.user);
+  const comps = extractCompanies(data.companies);
+
+  const energy   = ecoStat('energy', skills.energy);
+  const entre    = ecoStat('entrepreneurship', skills.entrepreneurship);
+  const prod     = ecoStat('production', skills.production);
+  const cosLim   = ecoStat('companies', skills.companies);
+  const mgmt     = ecoStat('management', skills.management);
+
+  const ecoSp = skills.energy + skills.entrepreneurship + skills.production
+    + skills.companies + skills.management;
+
+  // raw PP/day (formulas from GroxEmpire README)
+  // work actions/day = floor(energyBar/10) × 2.4 × usage
+  // raw PP/day = actions × production stat
+  const workActions = actionsPerDay(energy, 1);
+  const workPP = workActions * prod;
+  const entreSlots = Math.floor(entre / 10); // self-work slots per 10h
+  const entreActions = actionsPerDay(entre, 1);
+  const entrePP = entreActions * prod;
+
+  $('#economy-content').innerHTML = `
+    <div class="stats">
+      <div class="stat"><span class="stat-label">Energy</span><span class="stat-value">${energy}</span></div>
+      <div class="stat"><span class="stat-label">Entre</span><span class="stat-value">${entre}</span></div>
+      <div class="stat"><span class="stat-label">Prod</span><span class="stat-value">${prod}</span></div>
+      <div class="stat"><span class="stat-label">Cos lim</span><span class="stat-value">${cosLim}</span></div>
+      <div class="stat"><span class="stat-label">Mgmt</span><span class="stat-value">${mgmt}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Eco skills · ${ecoSp} pts spent</div>
+      <div class="skills">
+        ${skillRow('⚡ Energy', skills.energy)}
+        ${skillRow('💼 Entrepreneurship', skills.entrepreneurship)}
+        ${skillRow('🏭 Production', skills.production)}
+        ${skillRow('🏢 Companies', skills.companies)}
+        ${skillRow('👤 Management', skills.management)}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Daily raw PP</div>
+      <div class="skills">
+        <div class="skill">
+          <span class="skill-name">Work (energy → PP)</span>
+          <span class="skill-value">${fmt(workPP, 1)} <span class="sub">${fmt(workActions, 1)} actions × ${prod}</span></span>
+        </div>
+        <div class="skill">
+          <span class="skill-name">Self-work (entre)</span>
+          <span class="skill-value">${fmt(entrePP, 1)} <span class="sub">${entreSlots} slots/10h</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Factories · ${comps.length}/${cosLim}</div>
+      ${companiesTable(comps)}
+    </div>
+
+    <div class="note">Net profit (factory revenue, ingredient costs, market prices, wage) lands with build presets next.</div>
+  `;
+  $('#economy-badge').textContent = `${comps.length}/${cosLim} factories`;
+}
+
+function companiesTable(comps) {
+  if (!comps.length) {
+    return `<p class="muted" style="font-size:0.85rem; margin:0;">No companies found.</p>`;
+  }
+  const rows = comps.map(c => `
+    <tr>
+      <td>${escapeHtml(c.name)}</td>
+      <td class="mono">${escapeHtml(c.specialization)}</td>
+      <td class="num">${c.aeLevel != null ? 'AE ' + c.aeLevel : '–'}</td>
+      <td class="num">${c.productionBonus != null ? fmt(c.productionBonus, 1) + '%' : '–'}</td>
+    </tr>
+  `);
+  return `<table class="list">
+    <thead><tr><th>Name</th><th>Spec</th><th>AE</th><th>Bonus</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  STATUS / FLOW
+ * ═══════════════════════════════════════════════════════════════════ */
+function setStatus(kind, msg = '') {
+  const el = $('#status');
+  el.className = 'status' + (kind ? ' ' + kind : '');
+  el.textContent = msg;
+}
+
+async function load(username) {
+  if (!username) {
+    setStatus('error', 'Enter a username.');
+    return;
+  }
+  setStatus('', `Resolving "${username}"…`);
+  $('#load-btn').disabled = true;
+  $('#player').classList.add('hidden');
+  $('#debug-panel').classList.add('hidden');
+  try {
+    const userId = await resolveUserId(username);
+    if (!userId) throw new Error(`No user found for "${username}"`);
+    setStatus('', `Loading profile…`);
+    const data = await loadPlayer(userId);
+    renderPlayer(data);
+    const newQs = new URLSearchParams();
+    newQs.set('u', username);
+    if (DEBUG) newQs.set('debug', '1');
+    history.replaceState(null, '', '?' + newQs.toString());
+    setStatus('ok', `Loaded ${data.user?.username || username}.`);
+  } catch (e) {
+    console.error(e);
+    setStatus('error', e.message || String(e));
+  } finally {
+    $('#load-btn').disabled = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  BOOT
+ * ═══════════════════════════════════════════════════════════════════ */
+$('#load-btn').addEventListener('click', () => load($('#username').value.trim()));
+$('#username').addEventListener('keydown', e => {
+  if (e.key === 'Enter') load($('#username').value.trim());
+});
+
+const initialU = QS.get('u');
+if (initialU) {
+  $('#username').value = initialU;
+  load(initialU);
+} else {
+  $('#username').focus();
+}
+
+if (DEBUG) console.log('Debug mode on. Raw API responses logged. Add ?debug=1 to URL.');
+</script>
+</body>
+</html>

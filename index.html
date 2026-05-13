@@ -403,13 +403,16 @@
     <div class="grid">
       <div class="card">
         <h3>
-          <span>Combat <button class="info-btn" type="button" aria-label="About combat randomness" data-tip="Combat has built-in randomness — each hit lands between −5% and +5% of the listed damage. The Atk number shown is the expected average.">?</button></span>
+          <span>Combat <button class="info-btn" type="button" aria-label="About this section" data-tip="Your damage output and survivability. Atk = hit damage · Prc = accuracy · CC/CD = crit chance and damage · Arm/Ddg = damage reduction. Values include gear but not active buffs.">?</button></span>
           <span class="badge" id="combat-badge"></span>
         </h3>
         <div id="combat-content"></div>
       </div>
       <div class="card">
-        <h3>Economy <span class="badge" id="economy-badge"></span></h3>
+        <h3>
+          <span>Economy <button class="info-btn" type="button" aria-label="About this section" data-tip="Your daily income engine. Energy/Entre = daily actions · Production = PP per action · Cos = factory cap · Mgmt = worker cap. Daily PP = raw output before bonuses.">?</button></span>
+          <span class="badge" id="economy-badge"></span>
+        </h3>
         <div id="economy-content"></div>
       </div>
     </div>
@@ -581,36 +584,44 @@ async function resolveUserId(input) {
   if (!t) return null;
   // direct mongo id
   if (/^[a-f0-9]{24}$/i.test(t)) return t;
-  // search
+  // search — response shape is { userIds: [...], muIds: [...], countryIds: [...], ... }
   const r = await trpc('search.searchAnything', { searchText: t });
-  // multiple shape guesses — pick whichever yields users
-  const users =
-    r?.users ??
-    r?.results?.users ??
-    (Array.isArray(r) ? r.filter(x => x.type === 'user' || x.username) : []) ??
-    [];
-  if (!users.length) return null;
-  const exact = users.find(u =>
-    (u.username || u.name || '').toLowerCase() === t.toLowerCase()
-  );
-  const pick = exact || users[0];
-  return pick._id || pick.id || null;
+  const userIds = r?.userIds || [];
+  if (!userIds.length) return null;
+  return userIds[0];
 }
 
 async function loadPlayer(userId) {
-  const [user, inventory, companies] = await Promise.allSettled([
+  // company.getCompanies returns { items: [id1, id2, ...] } — IDs only, so
+  // we fan out to company.getById in parallel afterwards.
+  const [user, inventory, companyList] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
   ]);
+
+  let companies = null, companiesError = null;
+  if (companyList.status === 'fulfilled') {
+    const ids = companyList.value?.items || [];
+    try {
+      companies = await Promise.all(
+        ids.map(id => trpc('company.getById', { companyId: id }))
+      );
+    } catch (e) {
+      companiesError = String(e?.message || e);
+    }
+  } else {
+    companiesError = String(companyList.reason?.message || companyList.reason);
+  }
+
   return {
     userId,
     user: user.status === 'fulfilled' ? user.value : null,
     userError: user.status === 'rejected' ? String(user.reason?.message || user.reason) : null,
     inventory: inventory.status === 'fulfilled' ? inventory.value : null,
     inventoryError: inventory.status === 'rejected' ? String(inventory.reason?.message || inventory.reason) : null,
-    companies: companies.status === 'fulfilled' ? companies.value : null,
-    companiesError: companies.status === 'rejected' ? String(companies.reason?.message || companies.reason) : null,
+    companies,
+    companiesError,
   };
 }
 

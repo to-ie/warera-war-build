@@ -441,7 +441,7 @@
     <details class="state-section" open>
       <summary>
         <span class="caret">▾</span>
-        <h2>Your current state <span class="sub">snapshot only — no action needed</span></h2>
+        <h2>Your current state</h2>
       </summary>
       <div class="grid">
         <div class="card">
@@ -895,12 +895,12 @@ function companiesTable(comps) {
       <td>${escapeHtml(c.name)}</td>
       <td class="mono">${escapeHtml(c.itemCode)}</td>
       <td>${c.aeLevel != null ? 'AE ' + c.aeLevel : '–'}</td>
-      <td class="num">${c.workerCount}</td>
+      <td>${c.workerCount}</td>
       <td class="num">${c.production != null ? fmt(c.production, 1) : '–'}</td>
     </tr>
   `);
   return `<table class="list">
-    <thead><tr><th>Name</th><th>Item</th><th>Engine</th><th class="num">Workers</th><th class="num">Stored</th></tr></thead>
+    <thead><tr><th>Name</th><th>Item</th><th>Engine</th><th>Workers</th><th class="num">Stored</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 }

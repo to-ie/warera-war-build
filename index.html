@@ -825,12 +825,31 @@ const CONSUMABLES = {
   fish:  { code: 'fish',      label: 'Fish',       kind: 'food'  },
 };
 
-/* Factory daily-output assumptions — placeholder until Track B wires
-   real numbers from worker.getWorkers + gameConfig.getGameConfig. */
+/* AE PP/day per level — linear extrapolation from AE 5 = 120 (toie's
+   screenshot). Refine once gameConfig.getGameConfig is wired. */
+const AE_TABLE = { 0: 0, 1: 24, 2: 48, 3: 72, 4: 96, 5: 120, 6: 144, 7: 168, 8: 192, 9: 216, 10: 240 };
+
+/* Recipes for processed goods — best-guess 1:1 ratios; keys must match
+   itemTrading.getPrices keys. Correct in code once verified in-game. */
+const RECIPES = {
+  steel:      { iron: 1 },
+  concrete:   { limestone: 1 },
+  lightAmmo:  { steel: 1 },
+  ammo:       { steel: 1, lead: 1 },
+  heavyAmmo:  { steel: 2, lead: 1 },
+  bread:      { grain: 1 },
+  steak:      { livestock: 1 },
+  cookedFish: { fish: 1 },
+  cocain:     { coca: 1 },
+};
+
+/* Factory output assumptions — tune to calibrate against in-game.
+   workerActionsPerDay and workerProduction are the biggest unknowns. */
 const FACTORY_ASSUMPTIONS = {
-  dailyOutputPerWorker: 50,
-  aeOutputBonus: 0.10,
-  workerActionsPerDay: 24,
+  workerActionsPerDay: 12,      // typical worker engagement; full energy is 24
+  workerProduction: 15,         // average production stat across workers
+  manualOwnerContribution: 0,   // assume owner doesn't manually work own factories
+  outputCalibration: 1.0,       // global multiplier — adjust if all numbers are off
 };
 
 const PRESETS = {
@@ -873,21 +892,39 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  const [user, inventory, companyList, pricesR] = await Promise.allSettled([
+  // First wave: everything we can do in parallel from the userId alone.
+  // worker.getWorkers returns the workers across ALL of this user's owned
+  // companies, replacing the per-company workOffer.getWorkOfferByCompanyId
+  // calls (which returned null for owned companies anyway).
+  const [user, inventory, companyList, pricesR, workersR] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
     trpc('itemTrading.getPrices'),
+    trpc('worker.getWorkers', { userId }),
   ]);
 
   const u = user.status === 'fulfilled' ? user.value : null;
   const ids = companyList.status === 'fulfilled' ? (companyList.value?.items || []) : [];
 
+  // worker.getWorkers shape: { workersPerCompany: [{company:{_id,name,itemCode}, workers:[{user,wage,fidelity,...}]}] }
+  const workersData = workersR.status === 'fulfilled' ? workersR.value : null;
+  const workersByCompanyId = {};
+  if (workersData?.workersPerCompany) {
+    workersData.workersPerCompany.forEach(entry => {
+      if (entry?.company?._id) {
+        workersByCompanyId[entry.company._id] = entry.workers || [];
+      }
+    });
+  }
+
+  // Second wave: company details for owned companies, country, MU, and the
+  // workplace company (where the player is employed, if any).
   const secondary = await Promise.allSettled([
     ...ids.map(id => trpc('company.getById', { companyId: id })),
     u?.country ? trpc('country.getCountryById', { countryId: u.country }) : Promise.resolve(null),
     u?.mu ? trpc('mu.getById', { muId: u.mu }) : Promise.resolve(null),
-    u?.company ? trpc('workOffer.getWorkOfferByCompanyId', { companyId: u.company }) : Promise.resolve(null),
+    u?.company ? trpc('company.getById', { companyId: u.company }) : Promise.resolve(null),
   ]);
 
   const companies = secondary.slice(0, ids.length)
@@ -895,18 +932,28 @@ async function loadPlayer(userId) {
     .map(r => r.value);
   const country = secondary[ids.length]?.status === 'fulfilled' ? secondary[ids.length].value : null;
   const mu = secondary[ids.length + 1]?.status === 'fulfilled' ? secondary[ids.length + 1].value : null;
-  const ownWorkOffer = secondary[ids.length + 2]?.status === 'fulfilled' ? secondary[ids.length + 2].value : null;
+  const workplaceCompany = secondary[ids.length + 2]?.status === 'fulfilled' ? secondary[ids.length + 2].value : null;
 
-  const ownedOffers = await Promise.allSettled(
-    companies.map(co => co?._id
-      ? trpc('workOffer.getWorkOfferByCompanyId', { companyId: co._id })
-      : Promise.resolve(null))
-  );
-  const companyWorkOffers = {};
-  ownedOffers.forEach((r, i) => {
-    const co = companies[i];
-    if (r.status === 'fulfilled' && co?._id) companyWorkOffers[co._id] = r.value;
-  });
+  // Third wave: find the player's own wage by querying the workplace owner's
+  // workers and locating the player's worker record. workOffer endpoint returns
+  // null because it's the *open hiring offer*, not the existing worker's wage.
+  let ownWage = null;
+  let ownFidelity = null;
+  if (workplaceCompany?.user) {
+    try {
+      const ownerWorkers = await trpc('worker.getWorkers', { userId: workplaceCompany.user });
+      if (ownerWorkers?.workersPerCompany) {
+        const entry = ownerWorkers.workersPerCompany.find(e => e?.company?._id === workplaceCompany._id);
+        const myRecord = entry?.workers?.find(w => w.user === userId);
+        if (myRecord) {
+          ownWage = Number(myRecord.wage);
+          ownFidelity = Number(myRecord.fidelity);
+        }
+      }
+    } catch (e) {
+      if (DEBUG) console.warn('Failed to fetch workplace workers:', e);
+    }
+  }
 
   return {
     userId,
@@ -917,10 +964,15 @@ async function loadPlayer(userId) {
     companies,
     companiesError: companyList.status === 'rejected' ? String(companyList.reason?.message || companyList.reason) : null,
     country, mu,
-    ownWorkOffer,
-    companyWorkOffers,
+    workplaceCompany,
+    workersByCompanyId,
+    ownWage, ownFidelity,
+    // Synthesize an offer-shaped object so existing offerWage() callers keep working.
+    ownWorkOffer: ownWage != null ? { wage: ownWage, fidelity: ownFidelity, source: 'worker_record' } : null,
+    companyWorkOffers: {},
     prices: pricesR.status === 'fulfilled' ? normalizePrices(pricesR.value) : {},
     pricesError: pricesR.status === 'rejected' ? String(pricesR.reason?.message || pricesR.reason) : null,
+    workersError: workersR.status === 'rejected' ? String(workersR.reason?.message || workersR.reason) : null,
   };
 }
 
@@ -1376,13 +1428,10 @@ function renderEconomy(p, data) {
   const ownWage = offerWage(data.ownWorkOffer);
   const dailyWageIncome = ownWage != null ? ownWage * workActions : null;
 
-  const haveWageData = comps.some(c => c.dailyWageCost != null);
-  const havePriceData = comps.some(c => c.dailyRevenue != null);
+  const haveWageData = comps.some(c => c.dailyWageCost != null && c.dailyWageCost > 0);
 
-  // Tooltip text — explains the assumptions and acknowledges what's missing.
-  const factoryTip = haveWageData
-    ? `Daily output uses ${FACTORY_ASSUMPTIONS.dailyOutputPerWorker} units/worker/day with +${Math.round(FACTORY_ASSUMPTIONS.aeOutputBonus*100)}% per AE level (tunable in FACTORY_ASSUMPTIONS). Ingredient cost for processed goods not yet modeled.`
-    : `Daily output uses ${FACTORY_ASSUMPTIONS.dailyOutputPerWorker} units/worker/day with +${Math.round(FACTORY_ASSUMPTIONS.aeOutputBonus*100)}% per AE level (tunable in FACTORY_ASSUMPTIONS). Wage data not loaded — workOffer endpoint returned null. Ingredient cost not modeled.`;
+  // Tooltip — explains what's real vs estimated.
+  const factoryTip = `Real wages + fidelity from worker.getWorkers. Daily output = AE PP (linear from AE 5 = 120) + worker PP (${FACTORY_ASSUMPTIONS.workerActionsPerDay} actions × ${FACTORY_ASSUMPTIONS.workerProduction} prod default per worker, scaled by fidelity). Revenue at market price, minus ingredient cost for processed goods using hardcoded RECIPES (1:1 ratios — verify in-game). Tune FACTORY_ASSUMPTIONS / AE_TABLE / RECIPES if numbers don't match.`;
 
   $('#economy-content').innerHTML = `
     <div class="stats">

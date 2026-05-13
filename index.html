@@ -46,12 +46,7 @@
     gap: 0.75rem;
     flex-wrap: wrap;
   }
-  .brand h1 {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
+  .brand h1 { margin: 0; font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; }
   .brand .accent { color: var(--accent); }
   .brand .sub { color: var(--dimmer); font-size: 0.85rem; }
 
@@ -126,11 +121,7 @@
     flex-shrink: 0;
     object-fit: cover;
   }
-  .player-name {
-    margin: 0 0 0.2rem 0;
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
+  .player-name { margin: 0 0 0.2rem 0; font-size: 1.2rem; font-weight: 600; }
   .player-meta { margin: 0; font-size: 0.9rem; color: var(--dim); }
   .pill {
     display: inline-block;
@@ -148,9 +139,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
-  @media (max-width: 760px) {
-    .grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
 
   .card {
     background: var(--surface);
@@ -207,8 +196,21 @@
     font-size: 0.95rem;
   }
 
-  /* COLLAPSIBLE "CURRENT STATE" SECTION — caret on left for scanability */
-  .state-section { margin: 0; }
+  /* DELTA — inline change vs current state */
+  .delta {
+    font-size: 0.72rem;
+    font-weight: 500;
+    margin-left: 0.25rem;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .delta.positive { color: var(--accent); }
+  .delta.negative { color: var(--error); }
+  .delta.neutral  { color: var(--dimmer); }
+
+  /* COLLAPSIBLE SECTIONS — caret on left */
+  .state-section { margin: 0; margin-top: 1.5rem; }
+  .state-section:first-of-type { margin-top: 0; }
   .state-section > summary {
     display: flex;
     align-items: center;
@@ -237,8 +239,40 @@
     font-size: 0.85rem;
     margin-left: 0.5rem;
   }
-  .state-section:not([open]) > summary > .caret {
-    transform: rotate(-90deg);
+  .state-section:not([open]) > summary > .caret { transform: rotate(-90deg); }
+
+  /* PRESET PICKER */
+  .picker {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+  }
+  .picker button {
+    flex: 1;
+    min-width: 130px;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .picker button:hover { border-color: var(--accent); }
+  .picker button.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .preset-tagline {
+    color: var(--dim);
+    font-size: 0.88rem;
+    margin: 0 0 1rem 0;
+    font-style: italic;
   }
 
   .section { margin-top: 1rem; }
@@ -251,12 +285,15 @@
     margin-bottom: 0.45rem;
     font-weight: 500;
   }
-
-  .skills {
-    display: grid;
-    gap: 0.3rem;
-    font-size: 0.85rem;
+  .section-label .right {
+    float: right;
+    color: var(--text);
+    font-family: var(--mono);
+    letter-spacing: 0;
+    text-transform: none;
   }
+
+  .skills { display: grid; gap: 0.3rem; font-size: 0.85rem; }
   .skill {
     display: flex;
     justify-content: space-between;
@@ -267,20 +304,12 @@
     border-radius: 4px;
   }
   .skill-name { color: var(--dim); }
-  .skill-value {
-    font-family: var(--mono);
-    font-weight: 500;
-    text-align: right;
-  }
+  .skill-value { font-family: var(--mono); font-weight: 500; text-align: right; }
   .skill-value .sub { color: var(--dimmer); font-weight: 400; }
   .skill-value .total { color: var(--text); }
 
   /* TABLES */
-  table.list {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-  }
+  table.list { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   table.list th, table.list td {
     text-align: left;
     padding: 0.4rem 0.5rem;
@@ -294,12 +323,21 @@
     letter-spacing: 0.04em;
   }
   table.list td.mono { font-family: var(--mono); }
-  /* Numeric columns: right-align both data cells AND their headers */
   table.list td.num,
   table.list th.num { text-align: right; font-family: var(--mono); }
   table.list th.num { font-family: inherit; }
   table.list tr:last-child td { border-bottom: 0; }
   table.list tr.empty td { color: var(--dimmer); font-style: italic; }
+
+  .placeholder-text {
+    font-size: 0.85rem;
+    color: var(--dim);
+    margin: 0.25rem 0 0;
+    padding: 0.5rem 0.7rem;
+    background: var(--surface-2);
+    border-radius: 6px;
+    border-left: 2px solid var(--border-strong);
+  }
 
   .note {
     font-size: 0.8rem;
@@ -408,6 +446,7 @@
     .player-head { padding: 0.85rem 1rem; }
     .player-name { font-size: 1.1rem; }
     .info-btn::after { width: 200px; left: auto; right: 0; }
+    .picker button { min-width: 0; flex: 1 1 calc(50% - 0.25rem); font-size: 0.85rem; }
   }
 </style>
 </head>
@@ -418,7 +457,7 @@
     <div class="brand">
       <h1>War <span class="accent">Readiness</span></h1>
     </div>
-    <span class="brand sub">build planner for warera.io · v0.1</span>
+    <span class="brand sub">build planner for warera.io · v0.2</span>
   </div>
 </div>
 
@@ -461,6 +500,14 @@
       </div>
     </details>
 
+    <details class="state-section" id="target-section" open>
+      <summary>
+        <span class="caret">▾</span>
+        <h2>Target build <button class="info-btn" type="button" aria-label="About this section" data-tip="Pick a target loadout below. The Target combat panel shows what your stats would be with that loadout · the What to do panel lists the gear to buy, with live market prices.">?</button></span>
+      </summary>
+      <div id="target-content"></div>
+    </details>
+
     <details class="debug hidden" id="debug-panel">
       <summary>Raw API responses (debug mode)</summary>
       <pre id="debug-content"></pre>
@@ -491,6 +538,7 @@ const DEBUG = QS.has('debug');
  *  UTILITIES
  * ═══════════════════════════════════════════════════════════════════ */
 const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
@@ -512,12 +560,10 @@ function flag(code) {
     String.fromCodePoint(c.charCodeAt(0) - 65 + 0x1F1E6)
   ).join('');
 }
+function midpoint([min, max]) { return (min + max) / 2; }
 
 /* ═══════════════════════════════════════════════════════════════════
- *  TRPC CLIENT
- *  Warera's tRPC server uses BARE input on the URL: `?input=<params>`
- *  (no batch wrapper, no superjson `{json:...}` wrapper). Response can
- *  be a single object or batched array; we unwrap defensively.
+ *  TRPC CLIENT — bare input, single or batched response.
  * ═══════════════════════════════════════════════════════════════════ */
 async function trpc(endpoint, params = {}) {
   const input = encodeURIComponent(JSON.stringify(params));
@@ -535,7 +581,6 @@ async function trpc(endpoint, params = {}) {
 
 /* ═══════════════════════════════════════════════════════════════════
  *  GAME CONSTANTS
- *  Eco bases verified against toie level-18 numbers from the API.
  * ═══════════════════════════════════════════════════════════════════ */
 const ECO_BASE = { energy: 30, entrepreneurship: 30, production: 10, companies: 2, management: 4 };
 const ECO_GAIN = { energy: 10, entrepreneurship: 5, production: 3, companies: 1, management: 2 };
@@ -546,6 +591,76 @@ function pointsForLevel(level) { return (level * (level + 1)) / 2; }
 function pointsSpent(levels, keys) {
   return keys.reduce((s, k) => s + pointsForLevel(levels[k] || 0), 0);
 }
+
+/* GEAR STAT RANGES — from in-game craft screens (toie's screenshots).
+   Values are [min, max] of the stat range per rarity. Midpoint used
+   for "expected craft" planning. Sources are in-game tooltips, so they
+   should hold unless balance changes. */
+const GEAR_STATS = {
+  common:    { weapon: { attack: [21,40],  crit: [1,5] },   helmet: { critDamage: [1,15] },   chest: { armor: [1,5] },   pants: { armor: [1,5] },   boots: { dodge: [1,5] },   gloves: { precision: [1,5] } },
+  uncommon:  { weapon: { attack: [51,60],  crit: [6,10] },  helmet: { critDamage: [16,30] },  chest: { armor: [6,10] },  pants: { armor: [6,10] },  boots: { dodge: [6,10] },  gloves: { precision: [6,10] } },
+  rare:      { weapon: { attack: [71,90],  crit: [11,15] }, helmet: { critDamage: [31,50] },  chest: { armor: [11,15] }, pants: { armor: [11,15] }, boots: { dodge: [11,15] }, gloves: { precision: [11,15] } },
+  epic:      { weapon: { attack: [101,130], crit: [16,20] }, helmet: { critDamage: [71,90] },  chest: { armor: [21,30] }, pants: { armor: [21,30] }, boots: { dodge: [21,25] }, gloves: { precision: [21,25] } },
+  legendary: { weapon: { attack: [141,170], crit: [26,35] }, helmet: { critDamage: [91,110] }, chest: { armor: [36,50] }, pants: { armor: [36,50] }, boots: { dodge: [31,40] }, gloves: { precision: [31,40] } },
+  mythic:    { weapon: { attack: [221,300], crit: [41,50] }, helmet: { critDamage: [121,150] },chest: { armor: [56,70] }, pants: { armor: [56,70] }, boots: { dodge: [51,60] }, gloves: { precision: [51,60] } },
+};
+
+/* ITEM CODES — verified against toie's inventory: numeric suffix = rarity
+   index (1=common ... 6=mythic). Weapon names are unique. Codes will be
+   cross-checked against itemTrading.getPrices when prices are fetched. */
+const RARITY_BY_INDEX = ['', 'common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+const WEAPON_BY_RARITY = { common: 'knife', uncommon: 'gun', rare: 'rifle', epic: 'sniper', legendary: 'tank', mythic: 'fighterJet' };
+
+function itemCode(slot, rarity) {
+  if (slot === 'weapon') return WEAPON_BY_RARITY[rarity];
+  return `${slot}${RARITY_BY_INDEX.indexOf(rarity)}`;
+}
+
+function rarityFromCode(code) {
+  if (!code) return null;
+  const m = String(code).match(/(\d)$/);
+  if (m) return RARITY_BY_INDEX[parseInt(m[1], 10)] || null;
+  const byWeapon = Object.entries(WEAPON_BY_RARITY).find(([, c]) => c === code);
+  return byWeapon ? byWeapon[0] : null;
+}
+
+function rarityIndex(rarity) { return RARITY_BY_INDEX.indexOf(rarity); }
+
+/* BUFFS */
+const BUFFS = {
+  pill:  { damageMult: 1.60 },
+  ammo:  { none: 1.00, light: 1.10, ammo: 1.20, heavy: 1.40 },  // damage multipliers
+  food:  { none: 0,    bread: 0.10, steak: 0.15, fish: 0.20 },  // HP percent bonuses
+};
+const AMMO_CODES = { light: 'lightAmmo', ammo: 'ammo', heavy: 'heavyAmmo' };
+const FOOD_CODES = { bread: 'bread', steak: 'steak', fish: 'fish' };
+const PILL_CODE  = 'pill';
+
+/* PRESETS — three opinionated build targets. Each defines gear by
+   rarity per slot, the consumables that should be active during war,
+   and a short tagline shown under the picker. */
+const PRESETS = {
+  basic: {
+    name: 'War Basic',
+    tagline: 'Sustainable build — keep fighting while staying profit-positive. Recommended baseline.',
+    gear: { weapon: 'rare', helmet: 'rare', chest: 'rare', pants: 'rare', boots: 'rare', gloves: 'rare' },
+    buffs: { pill: false, ammo: 'light', food: 'steak' },
+  },
+  highDamage: {
+    name: 'War High-Damage',
+    tagline: 'Pill active. Legendary weapon + boots, Epic everything else. Burns gold for output.',
+    gear: { weapon: 'legendary', helmet: 'epic', chest: 'epic', pants: 'epic', boots: 'legendary', gloves: 'epic' },
+    buffs: { pill: true, ammo: 'ammo', food: 'fish' },
+  },
+  debuff: {
+    name: 'War Debuff',
+    tagline: 'For pill cooldown windows. Same gear as Basic, no pill, cheap ammo. Reduces bleed while you wait.',
+    gear: { weapon: 'rare', helmet: 'rare', chest: 'rare', pants: 'rare', boots: 'rare', gloves: 'rare' },
+    buffs: { pill: false, ammo: 'light', food: 'steak' },
+  },
+};
+
+let selectedPreset = 'basic';
 
 /* ═══════════════════════════════════════════════════════════════════
  *  DATA LOAD
@@ -561,10 +676,11 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  const [user, inventory, companyList] = await Promise.allSettled([
+  const [user, inventory, companyList, pricesR] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
+    trpc('itemTrading.getPrices'),
   ]);
 
   const u = user.status === 'fulfilled' ? user.value : null;
@@ -590,9 +706,28 @@ async function loadPlayer(userId) {
     inventoryError: inventory.status === 'rejected' ? String(inventory.reason?.message || inventory.reason) : null,
     companies,
     companiesError: companyList.status === 'rejected' ? String(companyList.reason?.message || companyList.reason) : null,
-    country,
-    mu,
+    country, mu,
+    prices: pricesR.status === 'fulfilled' ? normalizePrices(pricesR.value) : {},
+    pricesError: pricesR.status === 'rejected' ? String(pricesR.reason?.message || pricesR.reason) : null,
   };
+}
+
+/* itemTrading.getPrices may return { prices: {...} }, { items: [...] },
+   or a flat map. Normalize to { itemCode: number }. */
+function normalizePrices(raw) {
+  if (!raw) return {};
+  if (Array.isArray(raw)) {
+    const out = {};
+    raw.forEach(item => {
+      const code = item?.itemCode || item?.code || item?.item;
+      const price = item?.price ?? item?.value;
+      if (code && price != null) out[code] = price;
+    });
+    return out;
+  }
+  if (raw.prices && typeof raw.prices === 'object') return raw.prices;
+  if (typeof raw === 'object') return raw;
+  return {};
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -609,6 +744,7 @@ function extractPlayer(data) {
     avatarUrl: u.avatarUrl,
     level: lv.level ?? '?',
     militaryRank: u.militaryRank,
+    militaryRankPercent: s.attack?.militaryRankPercent ?? 0,
     totalSp: lv.totalSkillPoints ?? 0,
     spentSp: lv.spentSkillPoints ?? 0,
     availableSp: lv.availableSkillPoints ?? 0,
@@ -618,13 +754,13 @@ function extractPlayer(data) {
     derived: {
       atk: grab('attack', 'total'),
       prc: grab('precision', 'total'),
-      cc: grab('criticalChance', 'total'),
-      cd: grab('criticalDamages', 'total'),
+      cc:  grab('criticalChance', 'total'),
+      cd:  grab('criticalDamages', 'total'),
       armRaw: grab('armor', 'total'),
       arm: s.armor?.totalAfterSoftCap ?? s.armor?.total ?? 0,
       ddgRaw: grab('dodge', 'total'),
       ddg: s.dodge?.totalAfterSoftCap ?? s.dodge?.total ?? 0,
-      hp: grab('health', 'total') || 100,
+      hp:  grab('health', 'total') || 100,
       loot: grab('lootChance', 'total'),
       hunger: grab('hunger', 'total') || 4,
     },
@@ -674,6 +810,75 @@ function extractCompanies(comps) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+ *  TARGET BUILD MATH
+ * ═══════════════════════════════════════════════════════════════════ */
+function computeTargetStats(preset, militaryRankPercent = 0) {
+  const g = preset.gear;
+  const b = preset.buffs;
+  const gs = r => GEAR_STATS[r];
+
+  const weaponAtk  = midpoint(gs(g.weapon).weapon.attack);
+  const weaponCrit = midpoint(gs(g.weapon).weapon.crit);
+  const helmetCD   = midpoint(gs(g.helmet).helmet.critDamage);
+  const chestArm   = midpoint(gs(g.chest).chest.armor);
+  const pantsArm   = midpoint(gs(g.pants).pants.armor);
+  const bootsDdg   = midpoint(gs(g.boots).boots.dodge);
+  const glovesPrc  = midpoint(gs(g.gloves).gloves.precision);
+
+  const pillMult = b.pill ? BUFFS.pill.damageMult : 1;
+  const ammoMult = BUFFS.ammo[b.ammo] ?? 1;
+  const foodHp   = BUFFS.food[b.food] ?? 0;
+  const rankMult = 1 + militaryRankPercent / 100;
+
+  const armRaw = chestArm + pantsArm;
+  const ddgRaw = bootsDdg;
+
+  return {
+    atk: (100 + weaponAtk) * ammoMult * pillMult * rankMult,
+    prc: 50 + glovesPrc,
+    cc:  10 + weaponCrit,
+    cd:  100 + helmetCD,
+    armRaw,
+    arm: armRaw / (armRaw + 40) * 100,
+    ddgRaw,
+    ddg: ddgRaw / (ddgRaw + 40) * 100,
+    hp:  100 * (1 + foodHp),
+  };
+}
+
+function computeBuyGap(currentEq, preset, prices) {
+  const slots = ['weapon', 'helmet', 'chest', 'pants', 'boots', 'gloves'];
+  const out = [];
+  let total = 0;
+  for (const slot of slots) {
+    const targetRarity = preset.gear[slot];
+    const targetCode = itemCode(slot, targetRarity);
+    const currentCode = currentEq?.[slot]?.code;
+    const currentRarity = rarityFromCode(currentCode);
+
+    // Need to buy if missing, or if current rarity is lower than target
+    const needsBuy = !currentCode ||
+      currentCode === '?' ||
+      (currentRarity && rarityIndex(currentRarity) < rarityIndex(targetRarity)) ||
+      (!currentRarity);
+
+    if (needsBuy) {
+      const price = prices?.[targetCode];
+      out.push({
+        slot,
+        currentCode: currentCode && currentCode !== '?' ? currentCode : null,
+        currentRarity,
+        targetCode,
+        targetRarity,
+        price: price != null ? Number(price) : null,
+      });
+      if (price != null) total += Number(price);
+    }
+  }
+  return { items: out, total };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
  *  ECO MATH
  * ═══════════════════════════════════════════════════════════════════ */
 function actionsPerDay(bar, usagePct = 1) {
@@ -708,6 +913,7 @@ function renderPlayer(data) {
 
   renderCombat(p, data);
   renderEconomy(p, data);
+  renderTargetBuild(p, data);
 
   if (DEBUG) {
     $('#debug-panel').classList.remove('hidden');
@@ -718,10 +924,12 @@ function renderPlayer(data) {
       companies: data.companies,
       country: data.country,
       mu: data.mu,
+      prices: data.prices,
       errors: {
         user: data.userError,
         inventory: data.inventoryError,
         companies: data.companiesError,
+        prices: data.pricesError,
       }
     }, null, 2);
   }
@@ -737,7 +945,6 @@ function renderCombat(p, data) {
     $('#combat-content').innerHTML = `<p class="muted">Could not load equipment: <code>${escapeHtml(data.inventoryError)}</code></p>`;
     return;
   }
-
   const eq = extractEquipment(data.inventory);
   const d = p.derived;
   const fightPts = pointsSpent(p.levels, FIGHT_KEYS);
@@ -834,9 +1041,6 @@ function renderEconomy(p, data) {
   const eco = p.eco;
   const ecoPts = pointsSpent(p.levels, ECO_KEYS);
 
-  // Daily PP formulas from GroxEmpire eco-sim README:
-  //   actions/day = floor(bar / 10) × 2.4 × usage
-  //   raw PP/day  = actions × Production stat
   const workActions = actionsPerDay(eco.energy, 1);
   const workPP = workActions * eco.production;
   const entreActions = actionsPerDay(eco.entrepreneurship, 1);
@@ -880,8 +1084,6 @@ function renderEconomy(p, data) {
       <div class="section-label">Factories · ${comps.length}/${eco.companies}</div>
       ${companiesTable(comps)}
     </div>
-
-    <div class="note">Net profit (factory revenue, ingredient costs, market prices, wage) lands with build presets next.</div>
   `;
   $('#economy-badge').textContent = `${comps.length}/${eco.companies} factories`;
 }
@@ -903,6 +1105,139 @@ function companiesTable(comps) {
     <thead><tr><th>Name</th><th>Item</th><th>Engine</th><th>Workers</th><th class="num">Stored</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  RENDER — TARGET BUILD SECTION
+ * ═══════════════════════════════════════════════════════════════════ */
+function renderTargetBuild(p, data) {
+  const preset = PRESETS[selectedPreset];
+  const target = computeTargetStats(preset, p.militaryRankPercent);
+  const current = p.derived;
+  const eq = extractEquipment(data.inventory);
+  const gap = computeBuyGap(eq, preset, data.prices);
+
+  const buffsLine = describeBuffs(preset.buffs);
+
+  $('#target-content').innerHTML = `
+    <div class="picker">
+      ${Object.entries(PRESETS).map(([key, ps]) => `
+        <button type="button" data-preset="${key}" class="${key === selectedPreset ? 'active' : ''}">${escapeHtml(ps.name)}</button>
+      `).join('')}
+    </div>
+    <p class="preset-tagline">${escapeHtml(preset.tagline)}</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>
+          <span>Target combat</span>
+          <span class="badge">${fmtInt(target.atk)} attack</span>
+        </h3>
+        ${targetStatsBlock(target, current)}
+        <div class="section">
+          <div class="section-label">Active during fighting</div>
+          <p class="placeholder-text">${escapeHtml(buffsLine)}</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span>What to do</span></h3>
+        ${gapBuyNow(gap, !!data.prices && Object.keys(data.prices).length > 0)}
+        <div class="section">
+          <div class="section-label">Stockpile for the war week</div>
+          <p class="placeholder-text">Pills, ammo, food needed for an N-day war — netted against your factory output. Coming next.</p>
+        </div>
+        <div class="section">
+          <div class="section-label">Daily during war</div>
+          <p class="placeholder-text">Running cost (ammo + food + pill + gear wear) vs running income (factory revenue + wage). Coming next.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Picker wiring
+  $$('#target-content .picker button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedPreset = btn.dataset.preset;
+      renderTargetBuild(p, data);
+    });
+  });
+}
+
+function describeBuffs(buffs) {
+  const parts = [];
+  if (buffs.pill) parts.push('Pill (+60% damage)');
+  const ammoLabel = { light: 'Light Ammo (+10% damage)', ammo: 'Ammo (+20% damage)', heavy: 'Heavy Ammo (+40% damage)' }[buffs.ammo];
+  if (ammoLabel) parts.push(ammoLabel);
+  const foodLabel = { bread: 'Bread (+10% health)', steak: 'Steak (+15% health)', fish: 'Fish (+20% health)' }[buffs.food];
+  if (foodLabel) parts.push(foodLabel);
+  return parts.length ? parts.join(' · ') : 'No active buffs';
+}
+
+function targetStatsBlock(target, current) {
+  const stat = (label, t, c, suffix = '') => {
+    const tv = Math.round(t);
+    const cv = Math.round(c);
+    const delta = tv - cv;
+    const cls = delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral';
+    const sign = delta > 0 ? '+' : '';
+    const deltaStr = delta === 0
+      ? ''
+      : `<span class="delta ${cls}">${sign}${fmtInt(delta)}${suffix}</span>`;
+    return `<div class="stat">
+      <span class="stat-label">${label}</span>
+      <span class="stat-value">${fmtInt(tv)}${suffix}${deltaStr}</span>
+    </div>`;
+  };
+  return `<div class="stats">
+    ${stat('Attack', target.atk, current.atk)}
+    ${stat('Precision', target.prc, current.prc, '%')}
+    ${stat('Crit chance', target.cc, current.cc, '%')}
+    ${stat('Crit damage', target.cd, current.cd, '%')}
+    ${stat('Armor', target.arm, current.arm, '%')}
+    ${stat('Dodge', target.ddg, current.ddg, '%')}
+    ${stat('Health', target.hp, current.hp)}
+  </div>`;
+}
+
+function gapBuyNow(gap, havePrices) {
+  if (gap.items.length === 0) {
+    return `<div class="section">
+      <div class="section-label">Buy now (one-time)</div>
+      <p class="placeholder-text" style="color: var(--accent); border-color: var(--accent);">You already have this gear (or better) in every slot. ✓</p>
+    </div>`;
+  }
+
+  const slotLabels = {
+    weapon: '🗡️ Weapon',
+    helmet: '⛑️ Helmet',
+    chest:  '🦺 Chest',
+    pants:  '👖 Pants',
+    boots:  '👢 Boots',
+    gloves: '🧤 Gloves',
+  };
+
+  const rows = gap.items.map(it => `
+    <tr>
+      <td>${slotLabels[it.slot] || it.slot}</td>
+      <td class="mono">${it.currentCode ? escapeHtml(it.currentCode) : '<span class="muted">none</span>'}</td>
+      <td class="mono">${escapeHtml(it.targetCode)}</td>
+      <td class="num">${it.price != null ? fmt(it.price, 2) + ' g' : (havePrices ? '?' : '–')}</td>
+    </tr>
+  `).join('');
+
+  const totalLine = gap.total > 0
+    ? `<span class="right">${fmt(gap.total, 2)} g total</span>`
+    : '';
+
+  return `<div class="section">
+    <div class="section-label">Buy now (one-time) ${totalLine}</div>
+    <table class="list">
+      <thead><tr><th>Slot</th><th>From</th><th>To</th><th class="num">Price</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${!havePrices ? '<p class="note">Live prices unavailable — codes shown for reference.</p>' : ''}
+  </div>`;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -958,7 +1293,7 @@ if (initialU) {
   $('#username').focus();
 }
 
-if (DEBUG) console.log('Debug mode on. Raw API responses logged. Add ?debug=1 to URL.');
+if (DEBUG) console.log('Debug mode on. Add ?debug=1 to URL.');
 </script>
 </body>
 </html>

@@ -189,11 +189,41 @@
   }
   .stat-label {
     display: block;
+    color: var(--dim);
+    font-size: 0.74rem;
+    margin-bottom: 0.25rem;
+  }
+
+  /* COLLAPSIBLE "CURRENT STATE" SECTION */
+  .state-section { margin: 0; }
+  .state-section > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 0.5rem 0 0.85rem;
+    list-style: none;
+    user-select: none;
+  }
+  .state-section > summary::-webkit-details-marker { display: none; }
+  .state-section > summary > h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .state-section > summary > h2 .sub {
     color: var(--dimmer);
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.2rem;
+    font-weight: 400;
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
+  }
+  .state-section > summary > .caret {
+    color: var(--dim);
+    transition: transform 0.2s;
+    font-size: 0.85rem;
+  }
+  .state-section:not([open]) > summary > .caret {
+    transform: rotate(-90deg);
   }
   .stat-value {
     font-family: var(--mono);
@@ -379,22 +409,28 @@
       </div>
     </div>
 
-    <div class="grid">
-      <div class="card">
-        <h3>
-          <span>Combat <button class="info-btn" type="button" aria-label="About this section" data-tip="Your damage output and survivability. Atk = hit damage · Prc = accuracy · CC/CD = crit chance and damage · Arm/Ddg = damage reduction. Values include gear but not active buffs.">?</button></span>
-          <span class="badge" id="combat-badge"></span>
-        </h3>
-        <div id="combat-content"></div>
+    <details class="state-section" open>
+      <summary>
+        <h2>Your current state <span class="sub">snapshot only — no action needed</span></h2>
+        <span class="caret">▾</span>
+      </summary>
+      <div class="grid">
+        <div class="card">
+          <h3>
+            <span>Combat <button class="info-btn" type="button" aria-label="About this section" data-tip="Your damage output and survivability. Attack = damage per hit · Precision = accuracy · Crit chance / Crit damage = how often and how hard crits hit · Armor / Dodge = damage reduction. Values include gear but not active buffs.">?</button></span>
+            <span class="badge" id="combat-badge"></span>
+          </h3>
+          <div id="combat-content"></div>
+        </div>
+        <div class="card">
+          <h3>
+            <span>Economy <button class="info-btn" type="button" aria-label="About this section" data-tip="Your daily income engine. Energy and Entrepreneurship cap your daily actions · Production = PP earned per action · Companies = factory cap · Management = worker cap.">?</button></span>
+            <span class="badge" id="economy-badge"></span>
+          </h3>
+          <div id="economy-content"></div>
+        </div>
       </div>
-      <div class="card">
-        <h3>
-          <span>Economy <button class="info-btn" type="button" aria-label="About this section" data-tip="Your daily income engine. Energy/Entre = daily actions · Production = PP per action · Cos = factory cap · Mgmt = worker cap. Daily PP = raw output before bonuses.">?</button></span>
-          <span class="badge" id="economy-badge"></span>
-        </h3>
-        <div id="economy-content"></div>
-      </div>
-    </div>
+    </details>
 
     <details class="debug hidden" id="debug-panel">
       <summary>Raw API responses (debug mode)</summary>

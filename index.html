@@ -471,6 +471,38 @@
   .placeholder-text.ok { color: var(--accent); border-color: var(--accent); }
   .placeholder-text.warn { color: var(--warn); border-color: var(--warn); }
 
+  .plan-list { display: grid; gap: 0.25rem; }
+  .plan-row {
+    background: var(--surface-2);
+    border-radius: 4px;
+    padding: 0.4rem 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+  }
+  .plan-row.done { opacity: 0.45; }
+  .plan-row.next { border-left: 3px solid var(--accent); background: var(--accent-soft); }
+  .plan-level {
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    min-width: 3.5em;
+    flex-shrink: 0;
+  }
+  .plan-spend { flex: 1; color: var(--text); }
+  .plan-badge {
+    font-size: 0.56rem;
+    font-weight: 600;
+    padding: 0.04rem 0.36rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+  .plan-badge.done { background: rgba(139,148,163,0.18); color: var(--dimmer); }
+  .plan-badge.next { background: var(--accent-soft); color: var(--accent); }
+
   .grand-total {
     margin-top: 0.9rem;
     padding: 0.7rem 0.85rem;
@@ -950,8 +982,20 @@ const PRESETS = {
     foundations: {
       minCompanies: 6,
       minAe: 4,
-      note: 'Needs 6+ companies at AE 4+ to self-sustain. 7 companies at AE 5 is ideal — unlocks an Epic weapon upgrade.',
+      note: 'Needs 6+ companies at AE 4+ to self-sustain. 6 companies at AE 5+ unlocks an Epic weapon upgrade.',
     },
+    skillPlan: [
+      { level: 21, skill: 'criticalDamages', label: 'Crit damage' },
+      { level: 22, skill: 'hunger',          label: 'Hunger' },
+      { level: 23, skill: 'attack',          label: 'Attack' },
+      { level: 24, skill: 'criticalChance',  label: 'Crit chance' },
+      { level: 25, skill: 'lootChance',      label: 'Loot chance' },
+      { level: 26, skill: 'dodge',           label: 'Dodge' },
+      { level: 27, skill: 'criticalDamages', label: 'Crit damage' },
+      { level: 28, skill: null,              label: 'Save SP for next levels' },
+      { level: 29, skill: 'precision',       label: 'Precision' },
+      { level: 30, skill: 'attack',          label: 'Attack' },
+    ],
     gearModel: 'gap',
     consumablesModel: 'energy',
     hitsFieldEnabled: true,
@@ -970,7 +1014,7 @@ const PRESETS = {
     gearModel: 'per-day',
     gearPerDay: { weapon: 3.5, helmet: 1.5, chest: 1.5, pants: 1.5, boots: 1.5, gloves: 1.5 },
     consumablesModel: 'pill-push',
-    consumablesPerDay: { ammo: 350, food: 10, pill: 1 },
+    consumablesPerDay: { ammo: 350, food: 12.5, pill: 1 },
     hitsFieldEnabled: false,
   },
 };
@@ -1811,6 +1855,51 @@ function renderTargetBuild(p, data) {
   const hitsToday = effectiveHitsPerDay(p, warParams);
   const hitsAutoDerived = warParams.hitsPerDay == null;
 
+  /* Skill plan card — only when preset has a plan and player is below cap.
+     Marks past-level entries as "done", the first future entry as "next". */
+  let skillPlanCard = '';
+  if (preset.skillPlan) {
+    const currentLevel = parseInt(p.level, 10) || 0;
+    if (currentLevel >= 30) {
+      skillPlanCard = `<div class="card" style="margin-top: 1rem;">
+        <h3><span>Skill plan</span></h3>
+        <p class="placeholder-text ok">✓ Level 30 reached — base plan complete. Customize from here.</p>
+      </div>`;
+    } else {
+      const sortedPlan = [...preset.skillPlan].sort((a, b) => a.level - b.level);
+      let nextMarked = false;
+      const rows = sortedPlan.map(plan => {
+        let cls = 'plan-row';
+        let badge = '';
+        if (plan.level <= currentLevel) {
+          cls += ' done';
+          badge = '<span class="plan-badge done">done</span>';
+        } else if (!nextMarked) {
+          cls += ' next';
+          badge = '<span class="plan-badge next">next</span>';
+          nextMarked = true;
+        }
+        const spend = plan.skill
+          ? `+1 ${escapeHtml(plan.label)}`
+          : `<span class="muted">${escapeHtml(plan.label)}</span>`;
+        return `<div class="${cls}">
+          <span class="plan-level">Lvl ${plan.level}</span>
+          <span class="plan-spend">${spend}</span>
+          ${badge}
+        </div>`;
+      }).join('');
+      const skillPlanTip = [
+        { term: 'Where to spend', desc: 'For each level from now to 30, which skill to put your point into.' },
+        { term: 'Save SP', desc: 'Some levels save SP for a bigger spend next level (skills cost more as they go up).' },
+        { term: 'Lvl 20 baseline', desc: 'Plan assumes: Atk 5, Prec 4, CC 3, CD 2, Arm 4, Ddg 4, HP 4, Loot 2, Hunger 2, Companies 4.' },
+      ];
+      skillPlanCard = `<div class="card" style="margin-top: 1rem;">
+        <h3><span>Skill plan ${infoBtn(skillPlanTip, 'Skill plan help')}</span><span class="badge">Lvl ${currentLevel} → 30</span></h3>
+        <div class="plan-list">${rows}</div>
+      </div>`;
+    }
+  }
+
   $('#target-content').innerHTML = `
     <div class="picker">
       ${Object.entries(PRESETS).map(([key, ps]) => `
@@ -1840,6 +1929,8 @@ function renderTargetBuild(p, data) {
         ${actionPlanSection(foundations, gearNeeds, consumables, preset, havePrices)}
       </div>
     </div>
+
+    ${skillPlanCard}
 
     <div class="card" style="margin-top: 1rem;">
       <h3><span>Daily during war</span><span class="badge">${fmtSigned(daily.warNet - 0)}/day net</span></h3>

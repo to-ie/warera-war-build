@@ -1809,8 +1809,7 @@ function companiesTable(comps) {
       ? `<td class="${c.dailyNet >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.dailyNet)}</td>`
       : `<td class="num muted">–</td>`;
     return `<tr>
-      <td>${escapeHtml(c.name)}&nbsp;${infoBtn(companyBreakdownRows(c), c.name + ' breakdown')}</td>
-      <td class="mono">${escapeHtml(c.itemCode)}</td>
+      <td>${escapeHtml(c.name)}&nbsp;<span class="mono" style="color: var(--dimmer); font-size: 0.78rem; margin-left: 0.25rem;">${escapeHtml(c.itemCode)}</span>&nbsp;${infoBtn(companyBreakdownRows(c), c.name + ' breakdown')}</td>
       <td>${c.aeLevel ? 'AE ' + c.aeLevel : '–'}</td>
       <td class="num">${c.workerCount}</td>
       ${revCol}
@@ -1819,7 +1818,7 @@ function companiesTable(comps) {
   });
   return `<table class="list">
     <thead><tr>
-      <th>Name</th><th>Item</th><th>Engine</th>
+      <th>Company</th><th>Engine</th>
       <th>Workers</th><th>Revenue</th><th>Net</th>
     </tr></thead>
     <tbody>${rows.join('')}</tbody>

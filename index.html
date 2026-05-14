@@ -1914,7 +1914,10 @@ function renderEconomy(p, data) {
       ${companiesTable(comps)}
     </div>
   `;
-  $('#economy-badge').textContent = `${comps.length}/${eco.companies} companies`;
+  const factoryNet = comps.reduce((s, c) => s + (c.dailyNet || 0), 0);
+  const totalDailyIncome = factoryNet + (dailyWageIncome || 0);
+  const incomeSign = totalDailyIncome > 0 ? '+' : '';
+  $('#economy-badge').textContent = `${incomeSign}${fmtCompact(totalDailyIncome)} ₿/day`;
 }
 
 function companyBreakdownRows(c) {

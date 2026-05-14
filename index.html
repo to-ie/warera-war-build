@@ -1769,6 +1769,77 @@ function wealthSection(data) {
   return wealthHtml + casesHtml;
 }
 
+/* Wealth section — surfaces user.stats.wealth (breakdown of your net
+   worth) and case-opening history. All data comes from user.getUserById,
+   no extra API call needed. */
+function wealthSection(data) {
+  const stats = data.user?.stats || {};
+  const wealth = stats.wealth;
+
+  let wealthHtml = '';
+  if (!wealth || typeof wealth !== 'object') {
+    wealthHtml = `<p class="muted" style="font-size:0.82rem; margin:0;">Wealth data unavailable.</p>`;
+  } else {
+    const rows = [
+      ['Companies', wealth.companies],
+      ['Items',     wealth.items],
+      ['Money',     wealth.money],
+      ['Equipment', wealth.equipments],
+      ['Weapons',   wealth.weapons],
+    ].filter(([, v]) => v != null);
+
+    const tbody = rows.map(([label, value]) => `
+      <tr>
+        <td>${label}</td>
+        <td class="num">${fmtBtc(value)}</td>
+      </tr>
+    `).join('');
+
+    wealthHtml = `<table class="list"><tbody>
+      ${tbody}
+      <tr class="total">
+        <td><strong>Total</strong></td>
+        <td class="num"><strong>${fmtBtc(wealth.total)}</strong></td>
+      </tr>
+    </tbody></table>`;
+  }
+
+  // Case-opening history — handy luck/drop tracker.
+  const caseEntries = [];
+  ['case1', 'case2'].forEach(key => {
+    const c = stats[key];
+    if (!c || !c.openedCount) return;
+    const rarity = c.byRarity || {};
+    const parts = ['common','uncommon','rare','epic','legendary','mythic']
+      .filter(r => rarity[r] > 0)
+      .map(r => `${rarity[r]} ${r}`)
+      .join(', ');
+    caseEntries.push({ label: key === 'case1' ? 'Common cases' : 'Premium cases', opened: c.openedCount, parts });
+  });
+
+  let casesHtml = '';
+  if (caseEntries.length) {
+    const rows = caseEntries.map(c => `
+      <tr>
+        <td>${c.label}</td>
+        <td class="num">${fmtInt(c.opened)}</td>
+        <td>${escapeHtml(c.parts || '—')}</td>
+      </tr>
+    `).join('');
+    casesHtml = `
+      <div style="margin-top: 0.7rem;">
+        <div style="color: var(--dimmer); font-size: 0.74rem; font-weight: 500; margin-bottom: 0.3rem;">Cases opened</div>
+        <table class="list">
+          <thead><tr><th>Type</th><th>Opened</th><th>Drops</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  return wealthHtml + casesHtml;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
  *  RENDER — ECONOMY CARD
  * ═══════════════════════════════════════════════════════════════════ */

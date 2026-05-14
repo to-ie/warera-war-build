@@ -1698,50 +1698,75 @@ function equipmentTable(eq) {
   </table>`;
 }
 
-/* Inventory section — groups items into Gear / Consumables / Cases /
-   Materials / Other, sorted within each by count desc. */
-function inventorySection(data) {
-  if (data.inventoryAllError && !data.inventoryAll) {
-    return `<p class="muted" style="font-size:0.82rem; margin:0;">Inventory data not available (API call to <code>inventory.fetchInventory</code> rejected).${DEBUG ? ' See debug panel below.' : ' Add <code>?debug=1</code> to URL to inspect.'}</p>`;
-  }
-  const items = normalizeInventory(data.inventoryAll);
-  if (!items.length) {
-    return `<p class="muted" style="font-size:0.82rem; margin:0;">Inventory empty or response shape unknown.${DEBUG ? ' See debug panel — raw response shown there.' : ' Add <code>?debug=1</code> to inspect raw response.'}</p>`;
+/* Wealth section — surfaces user.stats.wealth (breakdown of your net
+   worth) and case-opening history. All data comes from user.getUserById,
+   no extra API call needed. */
+function wealthSection(data) {
+  const stats = data.user?.stats || {};
+  const wealth = stats.wealth;
+
+  let wealthHtml = '';
+  if (!wealth || typeof wealth !== 'object') {
+    wealthHtml = `<p class="muted" style="font-size:0.82rem; margin:0;">Wealth data unavailable.</p>`;
+  } else {
+    const rows = [
+      ['Companies', wealth.companies],
+      ['Items',     wealth.items],
+      ['Money',     wealth.money],
+      ['Equipment', wealth.equipments],
+      ['Weapons',   wealth.weapons],
+    ].filter(([, v]) => v != null);
+
+    const tbody = rows.map(([label, value]) => `
+      <tr>
+        <td>${label}</td>
+        <td class="num">${fmtBtc(value)}</td>
+      </tr>
+    `).join('');
+
+    wealthHtml = `<table class="list"><tbody>
+      ${tbody}
+      <tr class="total">
+        <td><strong>Total</strong></td>
+        <td class="num"><strong>${fmtBtc(wealth.total)}</strong></td>
+      </tr>
+    </tbody></table>`;
   }
 
-  const groups = { gear: [], consumable: [], case: [], material: [], other: [] };
-  items.forEach(it => {
-    const cat = categorizeItem(it.code);
-    groups[cat].push(it);
+  // Case-opening history — handy luck/drop tracker.
+  const caseEntries = [];
+  ['case1', 'case2'].forEach(key => {
+    const c = stats[key];
+    if (!c || !c.openedCount) return;
+    const rarity = c.byRarity || {};
+    const parts = ['common','uncommon','rare','epic','legendary','mythic']
+      .filter(r => rarity[r] > 0)
+      .map(r => `${rarity[r]} ${r}`)
+      .join(', ');
+    caseEntries.push({ label: key === 'case1' ? 'Common cases' : 'Premium cases', opened: c.openedCount, parts });
   });
-  Object.values(groups).forEach(g => g.sort((a, b) => b.count - a.count));
 
-  const groupOrder = [
-    ['gear', 'Gear'],
-    ['consumable', 'Consumables'],
-    ['case', 'Cases'],
-    ['material', 'Materials'],
-    ['other', 'Other'],
-  ];
+  let casesHtml = '';
+  if (caseEntries.length) {
+    const rows = caseEntries.map(c => `
+      <tr>
+        <td>${c.label}</td>
+        <td class="num">${fmtInt(c.opened)}</td>
+        <td>${escapeHtml(c.parts || '—')}</td>
+      </tr>
+    `).join('');
+    casesHtml = `
+      <div style="margin-top: 0.7rem;">
+        <div style="color: var(--dimmer); font-size: 0.74rem; font-weight: 500; margin-bottom: 0.3rem;">Cases opened</div>
+        <table class="list">
+          <thead><tr><th>Type</th><th>Opened</th><th>Drops</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
 
-  const blocks = groupOrder
-    .filter(([key]) => groups[key].length > 0)
-    .map(([key, label]) => {
-      const rows = groups[key].map(it => {
-        const rarity = rarityFromCode(it.code);
-        const name = displayNameForCode(it.code);
-        return `<tr>
-          <td>${escapeHtml(name)}${rarity ? rarityTag(rarity) : ''}</td>
-          <td class="num">${fmtInt(it.count)}</td>
-        </tr>`;
-      }).join('');
-      return `<div style="margin-top: 0.7rem;">
-        <div style="color: var(--dimmer); font-size: 0.74rem; font-weight: 500; margin-bottom: 0.3rem;">${label}</div>
-        <table class="list"><tbody>${rows}</tbody></table>
-      </div>`;
-    });
-
-  return blocks.join('') || `<p class="muted" style="font-size:0.82rem; margin:0;">Inventory empty.</p>`;
+  return wealthHtml + casesHtml;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1779,7 +1804,7 @@ function renderEconomy(p, data) {
       <div class="stat"><span class="stat-label">Energy</span><span class="stat-value">${eco.energy}</span></div>
       <div class="stat"><span class="stat-label">Entrepreneurship</span><span class="stat-value">${eco.entrepreneurship}</span></div>
       <div class="stat"><span class="stat-label">Production</span><span class="stat-value">${eco.production}</span></div>
-      <div class="stat"><span class="stat-label">Companies</span><span class="stat-value">${eco.companies}</span></div>
+      <div class="stat"><span class="stat-label">Companies</span><span class="stat-value">${comps.length} / ${eco.companies}</span></div>
       <div class="stat"><span class="stat-label">Management</span><span class="stat-value">${eco.management}</span></div>
     </div>
 

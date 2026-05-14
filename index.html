@@ -1983,7 +1983,7 @@ function renderTargetBuild(p, data) {
     </div>
   `;
 
-  $('#target-content .picker button').forEach(btn => {
+  document.querySelectorAll('#target-content .picker button').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedPreset = btn.dataset.preset;
       // Reset the days field to the new preset's default — semantics change

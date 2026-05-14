@@ -976,7 +976,7 @@ const PRESETS = {
   basic: {
     name: 'War Basic',
     tagline: 'Sustainable — Rare gear, no pill. Sells loot + scrap to self-fund. Default for any war (including pill-debuff windows).',
-    outcome: '~180k damage/day with Rare weapon. ~220k/day if you have an Epic weapon. Bitcoin-positive day-to-day.',
+    outcome: '~180k damage/day with Rare weapon. ~220k/day if you have an Epic weapon. Bitcoin-positive day-to-day. Assumes 50% battle bonus.',
     gear: { weapon: 'rare', helmet: 'rare', chest: 'rare', pants: 'rare', boots: 'rare', gloves: 'rare' },
     buffs: { pill: false, ammo: 'light', food: 'steak' },
     foundations: {
@@ -998,12 +998,14 @@ const PRESETS = {
     ],
     gearModel: 'gap',
     consumablesModel: 'energy',
+    daysLabel: 'War days',
+    daysDefault: 7,
     hitsFieldEnabled: true,
   },
   highDamage: {
     name: 'War High-Damage',
-    tagline: 'Pill hard push. Tank + Legendary boots + Epic everything. Pop pill on full HP + hunger for max impact.',
-    outcome: '~1M damage per pill day. Big bitcoin burn — only worth it for high-stakes pushes.',
+    tagline: 'Stockpile for a 2-day pill push. Tank + Sniper weapons, Legendary boots, Epic gear. Pop pill on full HP + hunger for max impact.',
+    outcome: '~1M damage per pill day (assumes 50% battle bonus). Stockpile cost ~2.5K ₿ — about 2 weeks to save. Keep 2 sets of Rare gear in reserve as fallback.',
     gear: { weapon: 'legendary', helmet: 'epic', chest: 'epic', pants: 'epic', boots: 'legendary', gloves: 'epic' },
     buffs: { pill: true, ammo: 'ammo', food: 'fish' },
     foundations: {
@@ -1011,10 +1013,21 @@ const PRESETS = {
       minAe: 5,
       note: 'Foundations matter more here — company income offsets the burn. 7 companies AE 5 strongly recommended.',
     },
-    gearModel: 'per-day',
-    gearPerDay: { weapon: 3.5, helmet: 1.5, chest: 1.5, pants: 1.5, boots: 1.5, gloves: 1.5 },
+    gearModel: 'stockpile',
+    gearStockpile: [
+      { slot: 'boots',  rarity: 'legendary', perDay: 1.5 },
+      { slot: 'weapon', rarity: 'legendary', perDay: 2.5 },
+      { slot: 'weapon', rarity: 'epic',      perDay: 1.0 },
+      { slot: 'helmet', rarity: 'epic',      perDay: 1.5 },
+      { slot: 'chest',  rarity: 'epic',      perDay: 1.5 },
+      { slot: 'pants',  rarity: 'epic',      perDay: 1.5 },
+      { slot: 'gloves', rarity: 'epic',      perDay: 1.5 },
+    ],
     consumablesModel: 'pill-push',
-    consumablesPerDay: { ammo: 350, food: 12.5, pill: 1 },
+    consumablesPerDay: { ammo: 350, food: 12.5 },
+    pillsTotal: 2,
+    daysLabel: 'Pill push days',
+    daysDefault: 2,
     hitsFieldEnabled: false,
   },
 };
@@ -1355,6 +1368,33 @@ function computeFoundations(player, comps, preset) {
 }
 
 function computeGearNeeds(eq, preset, prices, params) {
+  const days = params.warDays;
+
+  /* Stockpile model — explicit list of items with rarity + per-day count.
+     Used by High-Damage where the weapon slot mixes Tank (Legendary) and
+     Sniper (Epic), and quantities scale with pill push days, not war days. */
+  if (preset.gearModel === 'stockpile') {
+    const items = preset.gearStockpile.map(g => {
+      const code = itemCode(g.slot, g.rarity);
+      const qty = Math.ceil(g.perDay * days);
+      const price = prices?.[code];
+      const unit = price != null ? Number(price) : null;
+      const line = unit != null ? unit * qty : null;
+      return {
+        slot: g.slot,
+        targetCode: code,
+        targetRarity: g.rarity,
+        qty,
+        unit,
+        line,
+        detail: `${g.perDay}/day × ${days} day${days > 1 ? 's' : ''}`,
+      };
+    });
+    const total = items.reduce((s, i) => s + (i.line || 0), 0);
+    const anyMissing = items.some(i => i.unit == null);
+    return { items, total, anyMissing };
+  }
+
   const items = [];
   let total = 0;
   let anyMissing = false;
@@ -1368,8 +1408,8 @@ function computeGearNeeds(eq, preset, prices, params) {
 
     if (preset.gearModel === 'per-day') {
       const perDay = preset.gearPerDay?.[slot] || 0;
-      qty = Math.ceil(perDay * params.warDays);
-      detail = `${perDay}/day × ${params.warDays} days — replaces gear as it breaks`;
+      qty = Math.ceil(perDay * days);
+      detail = `${perDay}/day × ${days} days — replaces gear as it breaks`;
     } else {
       const currentCode = eq?.[slot]?.code;
       const currentRarity = rarityFromCode(currentCode);
@@ -1413,9 +1453,14 @@ function computeConsumables(preset, prices, player, params) {
 
   if (preset.consumablesModel === 'pill-push') {
     const per = preset.consumablesPerDay;
-    push(CONSUMABLES[preset.buffs.ammo], per.ammo * days, `${per.ammo}/day × ${days} days — heavy pill-push consumption`);
-    push(CONSUMABLES[preset.buffs.food], per.food * days, `${per.food}/day × ${days} days — eaten at full hunger before pill`);
-    push(CONSUMABLES.pill,               per.pill * days, `${per.pill}/day × ${days} days`);
+    push(CONSUMABLES[preset.buffs.ammo], per.ammo * days, `${per.ammo}/day × ${days} day${days > 1 ? 's' : ''} — heavy pill-push consumption`);
+    push(CONSUMABLES[preset.buffs.food], Math.ceil(per.food * days), `${per.food}/day × ${days} day${days > 1 ? 's' : ''} — eaten at full hunger before pill`);
+    // Pills: fixed total per push (~1 per pill day), not per-day multiplied.
+    if (preset.pillsTotal != null) {
+      push(CONSUMABLES.pill, preset.pillsTotal, `${preset.pillsTotal} total per push (≈ 1 per pill day)`);
+    } else if (per.pill) {
+      push(CONSUMABLES.pill, per.pill * days, `${per.pill}/day × ${days} days`);
+    }
   } else {
     const hitsPerDay = effectiveHitsPerDay(player, params);
     const totalHits = hitsPerDay * days;
@@ -1938,9 +1983,12 @@ function renderTargetBuild(p, data) {
     </div>
   `;
 
-  $$('#target-content .picker button').forEach(btn => {
+  $('#target-content .picker button').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedPreset = btn.dataset.preset;
+      // Reset the days field to the new preset's default — semantics change
+      // (war days for Basic vs pill push days for High-Damage).
+      warParams.warDays = PRESETS[selectedPreset].daysDefault ?? DEFAULT_WAR_PARAMS.warDays;
       renderTargetBuild(p, data);
     });
   });
@@ -1950,7 +1998,8 @@ function renderTargetBuild(p, data) {
   if (wDays) {
     wDays.addEventListener('change', () => {
       const v = parseInt(wDays.value, 10);
-      warParams.warDays = isNaN(v) || v < 1 ? DEFAULT_WAR_PARAMS.warDays : v;
+      const fallback = PRESETS[selectedPreset].daysDefault ?? DEFAULT_WAR_PARAMS.warDays;
+      warParams.warDays = isNaN(v) || v < 1 ? fallback : v;
       renderTargetBuild(p, data);
     });
   }
@@ -1968,16 +2017,22 @@ function renderTargetBuild(p, data) {
 }
 
 function warParamsBar(player, preset, hitsToday, hitsAutoDerived) {
+  const daysLabel = preset.daysLabel || 'War days';
+  const daysTip = [
+    { term: 'War days', desc: 'Total length of the war. Drives sustainable ammo / food quantities for the Basic build.' },
+    { term: 'Pill push days', desc: 'For High-Damage: how many days within the war you intend to pop pills. The stockpile (gear + ammo + food + pills) scales with this.' },
+  ];
   const hitsTip = [
     { term: 'Auto', desc: `Derived from your Energy (${player.eco.energy} → ${Math.round(actionsPerDay(player.eco.energy))} actions/day).` },
     { term: 'Sustainable build', desc: 'Hits/day drives ammo and food quantities.' },
-    { term: 'Hard push', desc: 'Hits/day is ignored — pill push uses fixed daily consumption per the preset.' },
+    { term: 'Hard push', desc: 'Hits/day is ignored — pill push uses fixed stockpile quantities per the preset.' },
   ];
   const hitsDisabled = preset.hitsFieldEnabled === false;
   return `<div class="war-params">
-    <label>War days
+    <label>${escapeHtml(daysLabel)}
       <input id="war-days" type="number" min="1" max="30" value="${warParams.warDays}">
     </label>
+    ${infoBtn(daysTip, 'Days field help')}
     <label class="${hitsDisabled ? 'disabled' : ''}">Hits/day
       <input id="war-hits" type="number" min="0" max="500" value="${hitsToday}" placeholder="auto" ${hitsDisabled ? 'disabled' : ''}>
       ${hitsDisabled ? '<span class="auto-tag">(not used)</span>' : (hitsAutoDerived ? '<span class="auto-tag">(from energy)</span>' : '')}

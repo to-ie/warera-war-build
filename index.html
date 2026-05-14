@@ -292,7 +292,6 @@
     margin-right: 0.4rem;
   }
 
-  /* War params bar */
   .war-params {
     display: flex;
     gap: 1rem;
@@ -311,9 +310,7 @@
     align-items: center;
     gap: 0.4rem;
   }
-  .war-params label.disabled {
-    opacity: 0.4;
-  }
+  .war-params label.disabled { opacity: 0.4; }
   .war-params input {
     width: 56px;
     background: var(--surface);
@@ -325,19 +322,10 @@
     font-family: var(--mono);
     text-align: right;
   }
-  .war-params input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-  .war-params input[type=number] {
-    -moz-appearance: textfield;
-    appearance: textfield;
-  }
+  .war-params input:focus { outline: none; border-color: var(--accent); }
+  .war-params input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .war-params input[type=number]::-webkit-inner-spin-button,
-  .war-params input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
+  .war-params input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .war-params .auto-tag {
     color: var(--dimmer);
     font-size: 0.72rem;
@@ -385,7 +373,6 @@
   .skill-value .sub { color: var(--dimmer); font-weight: 400; }
   .skill-value .total { color: var(--text); font-weight: 600; }
 
-  /* Action rows — used in Foundations, Gear, Consumables. */
   .action-list { display: grid; gap: 0.4rem; }
   .action-row {
     background: var(--surface-2);
@@ -423,19 +410,9 @@
     font-weight: 600;
     text-align: right;
   }
-  .action-cost.unknown {
-    color: var(--dimmer);
-    font-style: italic;
-    font-size: 0.78rem;
-    font-weight: 400;
-  }
-  .action-cost.none {
-    color: var(--dimmer);
-    font-size: 0.78rem;
-    font-weight: 400;
-  }
+  .action-cost.unknown { color: var(--dimmer); font-style: italic; font-size: 0.78rem; font-weight: 400; }
+  .action-cost.none { color: var(--dimmer); font-size: 0.78rem; font-weight: 400; }
 
-  /* Tables */
   table.list { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   table.list th, table.list td {
     text-align: left;
@@ -454,12 +431,33 @@
   table.list td.pos { color: var(--accent); font-family: var(--mono); text-align: right; white-space: nowrap; }
   table.list td.neg { color: var(--error); font-family: var(--mono); text-align: right; white-space: nowrap; }
 
+  /* Rarity-colored text (kept for legacy uses; we now prefer .r-tag). */
   .r-common    { color: var(--rarity-common);    font-weight: 500; }
   .r-uncommon  { color: var(--rarity-uncommon);  font-weight: 500; }
   .r-rare      { color: var(--rarity-rare);      font-weight: 500; }
   .r-epic      { color: var(--rarity-epic);      font-weight: 500; }
   .r-legendary { color: var(--rarity-legendary); font-weight: 500; }
   .r-mythic    { color: var(--rarity-mythic);    font-weight: 500; }
+
+  /* Compact rarity tag — small pill that sits after the item name. */
+  .r-tag {
+    display: inline-block;
+    font-size: 0.66rem;
+    font-weight: 600;
+    padding: 0.05rem 0.4rem;
+    border-radius: 3px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+  }
+  .r-tag.common    { background: rgba(139,148,163,0.18); color: var(--rarity-common); }
+  .r-tag.uncommon  { background: rgba(74,211,149,0.18); color: var(--rarity-uncommon); }
+  .r-tag.rare      { background: rgba(91,140,255,0.20); color: var(--rarity-rare); }
+  .r-tag.epic      { background: rgba(184,125,223,0.20); color: var(--rarity-epic); }
+  .r-tag.legendary { background: rgba(240,193,75,0.20); color: var(--rarity-legendary); }
+  .r-tag.mythic    { background: rgba(240,96,96,0.20); color: var(--rarity-mythic); }
 
   .placeholder-text {
     font-size: 0.85rem;
@@ -473,7 +471,6 @@
   .placeholder-text.ok { color: var(--accent); border-color: var(--accent); }
   .placeholder-text.warn { color: var(--warn); border-color: var(--warn); }
 
-  /* Grand total — sticks out clearly. */
   .grand-total {
     margin-top: 0.9rem;
     padding: 0.7rem 0.85rem;
@@ -489,7 +486,6 @@
   }
   .grand-total .mono { font-family: var(--mono); }
 
-  /* Daily-during-war flow — single-column blocks: Money in / Money out / Note / Net. */
   .war-flow { display: grid; gap: 0.5rem; }
   .flow-block {
     background: var(--surface-2);
@@ -501,7 +497,6 @@
     font-size: 0.78rem;
     color: var(--dim);
     font-weight: 500;
-    text-transform: none;
   }
   .flow-line {
     display: flex;
@@ -558,7 +553,6 @@
   .hidden { display: none !important; }
   .muted { color: var(--dim); }
 
-  /* Tooltip system */
   .info-btn {
     display: inline-flex;
     align-items: center;
@@ -580,11 +574,7 @@
     line-height: 1;
     flex-shrink: 0;
   }
-  .info-btn:hover, .info-btn:focus {
-    outline: none;
-    color: var(--accent);
-    border-color: var(--accent);
-  }
+  .info-btn:hover, .info-btn:focus { outline: none; color: var(--accent); border-color: var(--accent); }
   .info-btn .tip {
     position: absolute;
     top: calc(100% + 8px);
@@ -609,18 +599,10 @@
     white-space: normal;
   }
   .info-btn:hover .tip, .info-btn:focus .tip { opacity: 1; }
-  .tip-row {
-    display: block;
-    padding: 0.32rem 0;
-    border-bottom: 1px solid var(--border);
-  }
+  .tip-row { display: block; padding: 0.32rem 0; border-bottom: 1px solid var(--border); }
   .tip-row:first-child { padding-top: 0; }
   .tip-row:last-child  { padding-bottom: 0; border-bottom: 0; }
-  .tip-row strong {
-    color: var(--text);
-    font-weight: 600;
-    margin-right: 0.35rem;
-  }
+  .tip-row strong { color: var(--text); font-weight: 600; margin-right: 0.35rem; }
 
   details.debug {
     margin-top: 1rem;
@@ -680,7 +662,7 @@
     <div class="brand">
       <h1>War <span class="accent">Readiness</span></h1>
     </div>
-    <span class="brand sub">build planner for warera.io · v0.7</span>
+    <span class="brand sub">build planner for warera.io · v0.8</span>
   </div>
 </div>
 
@@ -778,7 +760,6 @@ function fmtInt(n) {
   if (n == null || isNaN(n)) return '–';
   return Math.round(Number(n)).toLocaleString();
 }
-/* Bitcoins are the in-game currency. ₿ is U+20BF. */
 function fmtBtc(n, d = 2) { return n == null || isNaN(n) ? '–' : fmt(n, d) + ' ₿'; }
 function fmtSigned(n, d = 2) {
   if (n == null || isNaN(n)) return '–';
@@ -786,7 +767,6 @@ function fmtSigned(n, d = 2) {
   return sign + fmt(n, d) + ' ₿';
 }
 const fmtGold = fmtBtc;
-/* Compact number formatter for badge-style displays (21.6K, 1.24M). */
 function fmtCompact(n) {
   if (n == null || isNaN(n)) return '–';
   const abs = Math.abs(n);
@@ -794,7 +774,6 @@ function fmtCompact(n) {
   if (abs >= 1e3) return (n / 1e3).toFixed(1) + 'K';
   return Math.round(n).toLocaleString();
 }
-/* Expected damage per hit, accounting for precision, crits, and miss-half. */
 function expectedDamagePerHit(d) {
   const atk = d.atk || 0;
   const prc = (d.prc || 0) / 100;
@@ -823,16 +802,17 @@ function infoBtn(content, label = 'More info') {
   return `<button class="info-btn" type="button" tabindex="0" aria-label="${escapeAttr(label)}">?<span class="tip">${tipRows(content)}</span></button>`;
 }
 
+/* Color a whole label by rarity (legacy). */
 function rarityColored(rarity, label) {
   if (!rarity) return escapeHtml(label || '');
   return `<span class="r-${rarity}">${escapeHtml(label)}</span>`;
 }
+/* Small rarity pill placed after an item name. Preferred over rarityColored. */
+function rarityTag(rarity) {
+  if (!rarity) return '';
+  return `<span class="r-tag ${rarity}">${RARITY_LABEL[rarity]}</span>`;
+}
 
-/* Action-row rendering helper. Each action has:
-   - what: the action ("Build 1 more company")
-   - detail: the why ("you have 6 built, 7 slots available")
-   - cost: number ₿ | null (unknown) | 'none' (no direct cost — e.g. skill upgrade)
-   - tone: 'warn' | 'ok-row' | undefined */
 function actionRow({ what, detail, cost, tone }) {
   let costHtml;
   if (cost === 'none') costHtml = `<div class="action-cost none">no direct cost</div>`;
@@ -878,8 +858,6 @@ function pointsSpent(levels, keys) {
   return keys.reduce((s, k) => s + pointsForLevel(levels[k] || 0), 0);
 }
 
-/* Companies skill level needed for a given max-companies target.
-   max = base(2) + skillLevel × gain(1)  →  skillLevel = max − 2 */
 function companiesSkillLevelForMax(maxTarget) {
   return Math.max(0, maxTarget - ECO_BASE.companies);
 }
@@ -914,9 +892,11 @@ function rarityFromCode(code) {
 
 function rarityIndex(rarity) { return RARITY_BY_INDEX.indexOf(rarity); }
 
+/* Now returns just the slot name (or weapon name) — no rarity prefix.
+   Rarity is shown separately via rarityTag(). */
 function gearItemName(slot, rarity) {
   if (slot === 'weapon') return WEAPON_DISPLAY[WEAPON_BY_RARITY[rarity]] || SLOT_LABEL.weapon;
-  return `${RARITY_LABEL[rarity] || ''} ${SLOT_LABEL[slot] || slot}`.trim();
+  return SLOT_LABEL[slot] || slot;
 }
 
 const BUFFS = {
@@ -954,10 +934,6 @@ const FACTORY_ASSUMPTIONS = {
   outputCalibration: 1.0,
 };
 
-/* PRESETS — only two now. War Debuff removed.
-   Numbers per day come from player intel collected from a level-24 player.
-   Lower-level players: similar pattern, slightly less damage, often 1 fewer
-   company. Adjust gearPerDay/consumablesPerDay as you calibrate. */
 const PRESETS = {
   basic: {
     name: 'War Basic',
@@ -970,8 +946,8 @@ const PRESETS = {
       minAe: 4,
       note: 'Needs 6+ companies at AE 4+ to self-sustain. 7 companies at AE 5 is ideal — unlocks an Epic weapon upgrade.',
     },
-    gearModel: 'gap',          // buy 1 of each missing — gear durability holds up
-    consumablesModel: 'energy', // ammo/food driven by your energy stat
+    gearModel: 'gap',
+    consumablesModel: 'energy',
     hitsFieldEnabled: true,
   },
   highDamage: {
@@ -986,9 +962,6 @@ const PRESETS = {
       note: 'Foundations matter more here — company income offsets the burn. 7 companies AE 5 strongly recommended.',
     },
     gearModel: 'per-day',
-    /* Per-day stockpile ratios from player intel:
-       2-day push = 7 tanks, 3 boots, 3 of each other slot, 700 ammo, 20 salmon, 2 pills.
-       Per day:    3.5 weapon, 1.5 boots, 1.5 each other slot, 350 ammo, 10 salmon, 1 pill. */
     gearPerDay: { weapon: 3.5, helmet: 1.5, chest: 1.5, pants: 1.5, boots: 1.5, gloves: 1.5 },
     consumablesModel: 'pill-push',
     consumablesPerDay: { ammo: 350, food: 10, pill: 1 },
@@ -1022,6 +995,47 @@ const ECONOMY_STAT_DESCRIPTIONS = [
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
+ *  INVENTORY CATEGORIZATION
+ * ═══════════════════════════════════════════════════════════════════ */
+const MATERIAL_CODES = new Set([
+  'iron','steel','limestone','concrete','grain','livestock','coca','cocain',
+  'lead','oil','wood','stone','copper','gold','silver','rubber','plastic'
+]);
+const CONSUMABLE_CODES = new Set([
+  'pill','lightAmmo','ammo','heavyAmmo','bread','steak','fish','cookedFish'
+]);
+const WEAPON_CODES = new Set(Object.values(WEAPON_BY_RARITY));
+
+function categorizeItem(code) {
+  if (!code) return 'other';
+  const c = String(code);
+  if (/^(helmet|chest|pants|boots|gloves)\d$/.test(c)) return 'gear';
+  if (WEAPON_CODES.has(c)) return 'gear';
+  if (CONSUMABLE_CODES.has(c)) return 'consumable';
+  if (/case|Case|key|Key/.test(c)) return 'case';
+  if (MATERIAL_CODES.has(c)) return 'material';
+  return 'other';
+}
+
+/* Resolve a display name for an item code (works for gear, consumables,
+   weapons, and falls back to a humanized version of the code). */
+function displayNameForCode(code) {
+  if (!code) return '';
+  const c = String(code);
+  // Weapons
+  const weaponEntry = Object.entries(WEAPON_BY_RARITY).find(([, wc]) => wc === c);
+  if (weaponEntry) return WEAPON_DISPLAY[weaponEntry[1]];
+  // Slotted gear (helmet1, chest3, etc.)
+  const slotMatch = c.match(/^([a-z]+)\d$/);
+  if (slotMatch && SLOT_LABEL[slotMatch[1]]) return SLOT_LABEL[slotMatch[1]];
+  // Consumables
+  const cons = Object.values(CONSUMABLES).find(x => x.code === c);
+  if (cons) return cons.label;
+  // Humanize camelCase
+  return c.replace(/([A-Z])/g, ' $1').replace(/^./, m => m.toUpperCase());
+}
+
+/* ═══════════════════════════════════════════════════════════════════
  *  DATA LOAD
  * ═══════════════════════════════════════════════════════════════════ */
 async function resolveUserId(input) {
@@ -1035,9 +1049,14 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  const [user, inventory, companyList, pricesR, workersR] = await Promise.allSettled([
+  /* inventory.fetchInventory is a guess based on the existing
+     inventory.fetchCurrentEquipment naming. If the endpoint name is
+     different, the call rejects silently and the section shows a
+     "data unavailable" placeholder — debug mode dumps the response. */
+  const [user, inventory, inventoryAll, companyList, pricesR, workersR] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
+    trpc('inventory.fetchInventory', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
     trpc('itemTrading.getPrices'),
     trpc('worker.getWorkers', { userId }),
@@ -1094,6 +1113,8 @@ async function loadPlayer(userId) {
     userError: user.status === 'rejected' ? String(user.reason?.message || user.reason) : null,
     inventory: inventory.status === 'fulfilled' ? inventory.value : null,
     inventoryError: inventory.status === 'rejected' ? String(inventory.reason?.message || inventory.reason) : null,
+    inventoryAll: inventoryAll.status === 'fulfilled' ? inventoryAll.value : null,
+    inventoryAllError: inventoryAll.status === 'rejected' ? String(inventoryAll.reason?.message || inventoryAll.reason) : null,
     companies,
     companiesError: companyList.status === 'rejected' ? String(companyList.reason?.message || companyList.reason) : null,
     country, mu,
@@ -1122,6 +1143,46 @@ function normalizePrices(raw) {
   if (raw.prices && typeof raw.prices === 'object') return raw.prices;
   if (typeof raw === 'object') return raw;
   return {};
+}
+
+/* Normalize an inventory response into [{code, count}, ...]. Handles:
+     - array of {code/itemCode/item, count/quantity/amount}
+     - object map {code: count}
+     - nested {items: [...]} */
+function normalizeInventory(raw) {
+  if (!raw) return [];
+  const tryNormalize = (val) => {
+    if (Array.isArray(val)) {
+      return val.map(it => ({
+        code: it?.code || it?.itemCode || it?.item,
+        count: Number(it?.count ?? it?.quantity ?? it?.amount ?? 0),
+      })).filter(it => it.code && it.count > 0);
+    }
+    if (val && typeof val === 'object') {
+      const entries = Object.entries(val);
+      // Only treat as code→count if values look numeric.
+      const looksNumeric = entries.every(([k, v]) =>
+        typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v))));
+      if (looksNumeric) {
+        return entries
+          .map(([code, count]) => ({ code, count: Number(count) }))
+          .filter(it => it.count > 0);
+      }
+    }
+    return null;
+  };
+
+  // Try direct
+  let out = tryNormalize(raw);
+  if (out && out.length) return out;
+  // Try nested under common keys
+  for (const key of ['items', 'inventory', 'data']) {
+    if (raw[key]) {
+      out = tryNormalize(raw[key]);
+      if (out && out.length) return out;
+    }
+  }
+  return [];
 }
 
 function offerWage(offer) {
@@ -1186,7 +1247,7 @@ function extractEquipment(inv) {
     return {
       code,
       rarity,
-      displayName: rarity ? gearItemName(key, rarity) : code,
+      displayName: gearItemName(key, rarity),
       durability: p.state != null ? Math.round((p.state / (p.maxState || 100)) * 100) : null,
       skills: p.skills || {},
     };
@@ -1285,16 +1346,12 @@ function extractCompanies(data) {
 /* ═══════════════════════════════════════════════════════════════════
  *  COMPUTE — FOUNDATIONS / GEAR / CONSUMABLES / DAILY
  * ═══════════════════════════════════════════════════════════════════ */
-
-/* Foundations = base economy needed to make the build work.
-   Companies-skill check, built-companies check, AE-level check. */
 function computeFoundations(player, comps, preset) {
   const items = [];
   const f = preset.foundations || {};
   const minCo = f.minCompanies ?? 0;
   const minAe = f.minAe ?? 0;
 
-  // 1. Companies-skill max (need enough slots)
   if (player.eco.companies < minCo) {
     const needSlots = minCo - player.eco.companies;
     const targetSkill = companiesSkillLevelForMax(minCo);
@@ -1307,7 +1364,6 @@ function computeFoundations(player, comps, preset) {
     });
   }
 
-  // 2. Built companies (have slots but haven't built)
   const targetBuilt = Math.min(minCo, player.eco.companies);
   if (comps.length < targetBuilt) {
     const need = targetBuilt - comps.length;
@@ -1320,7 +1376,6 @@ function computeFoundations(player, comps, preset) {
     });
   }
 
-  // 3. AE upgrades
   const lowAe = comps.filter(c => c.aeLevel < minAe);
   if (lowAe.length > 0) {
     const names = lowAe.map(c => `${c.name} (AE ${c.aeLevel})`).join(', ');
@@ -1335,9 +1390,6 @@ function computeFoundations(player, comps, preset) {
   return { items, note: f.note || '' };
 }
 
-/* Gear needs — two modes:
-   - 'gap': buy 1 of each missing/under-rarity slot
-   - 'per-day': stockpile for replacement (high-damage hard push) */
 function computeGearNeeds(eq, preset, prices, params) {
   const items = [];
   let total = 0;
@@ -1379,7 +1431,6 @@ function computeGearNeeds(eq, preset, prices, params) {
   return { items, total, anyMissing };
 }
 
-/* Consumables — energy-based (sustainable) or pill-push (hard push). */
 function computeConsumables(preset, prices, player, params) {
   const days = params.warDays;
   const out = [];
@@ -1532,10 +1583,12 @@ function renderPlayer(data) {
     $('#debug-panel').classList.remove('hidden');
     $('#debug-content').textContent = JSON.stringify({
       userId: data.userId, user: data.user, inventory: data.inventory,
+      inventoryAll: data.inventoryAll,
       companies: data.companies, country: data.country, mu: data.mu,
       ownWorkOffer: data.ownWorkOffer, workersByCompanyId: data.workersByCompanyId,
       prices: data.prices,
       errors: { user: data.userError, inventory: data.inventoryError,
+        inventoryAll: data.inventoryAllError,
         companies: data.companiesError, prices: data.pricesError, workers: data.workersError }
     }, null, 2);
   }
@@ -1554,6 +1607,9 @@ function renderCombat(p, data) {
   const eq = extractEquipment(data.inventory);
   const d = p.derived;
   const fightPts = pointsSpent(p.levels, FIGHT_KEYS);
+
+  const hitsPerDay = actionsPerDay(p.eco.energy);
+  const dmgPerDay = expectedDamagePerHit(d) * hitsPerDay;
 
   $('#combat-content').innerHTML = `
     <div class="stats">
@@ -1585,9 +1641,12 @@ function renderCombat(p, data) {
       <div class="section-label">Equipped gear</div>
       ${equipmentTable(eq)}
     </div>
+
+    <div class="section">
+      <div class="section-label">Inventory</div>
+      ${inventorySection(data)}
+    </div>
   `;
-  const hitsPerDay = actionsPerDay(p.eco.energy);
-  const dmgPerDay = expectedDamagePerHit(d) * hitsPerDay;
   $('#combat-badge').textContent = `${fmtCompact(dmgPerDay)} dmg/day`;
 }
 
@@ -1615,8 +1674,9 @@ function equipmentTable(eq) {
     const statStr = statKeys
       .map(sk => { const v = item.skills[sk]; return v ? `${fmtInt(v)} ${STAT_LABELS[sk] || sk}` : null; })
       .filter(Boolean).join(', ') || '–';
+    /* Item cell: plain name (no rarity color) + small rarity tag after. */
     const nameCell = item.rarity
-      ? rarityColored(item.rarity, item.displayName)
+      ? `${escapeHtml(item.displayName)}${rarityTag(item.rarity)}`
       : `<span class="mono">${escapeHtml(item.code)}</span>`;
     return `<tr>
       <td>${label}</td>
@@ -1629,6 +1689,52 @@ function equipmentTable(eq) {
     <thead><tr><th>Slot</th><th>Item</th><th>Stat</th><th>Durability</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
+}
+
+/* Inventory section — groups items into Gear / Consumables / Cases /
+   Materials / Other, sorted within each by count desc. */
+function inventorySection(data) {
+  if (data.inventoryAllError && !data.inventoryAll) {
+    return `<p class="muted" style="font-size:0.82rem; margin:0;">Inventory data not available (API call to <code>inventory.fetchInventory</code> rejected).${DEBUG ? ' See debug panel below.' : ' Add <code>?debug=1</code> to URL to inspect.'}</p>`;
+  }
+  const items = normalizeInventory(data.inventoryAll);
+  if (!items.length) {
+    return `<p class="muted" style="font-size:0.82rem; margin:0;">Inventory empty or response shape unknown.${DEBUG ? ' See debug panel — raw response shown there.' : ' Add <code>?debug=1</code> to inspect raw response.'}</p>`;
+  }
+
+  const groups = { gear: [], consumable: [], case: [], material: [], other: [] };
+  items.forEach(it => {
+    const cat = categorizeItem(it.code);
+    groups[cat].push(it);
+  });
+  Object.values(groups).forEach(g => g.sort((a, b) => b.count - a.count));
+
+  const groupOrder = [
+    ['gear', 'Gear'],
+    ['consumable', 'Consumables'],
+    ['case', 'Cases'],
+    ['material', 'Materials'],
+    ['other', 'Other'],
+  ];
+
+  const blocks = groupOrder
+    .filter(([key]) => groups[key].length > 0)
+    .map(([key, label]) => {
+      const rows = groups[key].map(it => {
+        const rarity = rarityFromCode(it.code);
+        const name = displayNameForCode(it.code);
+        return `<tr>
+          <td>${escapeHtml(name)}${rarity ? rarityTag(rarity) : ''}</td>
+          <td class="num">${fmtInt(it.count)}</td>
+        </tr>`;
+      }).join('');
+      return `<div style="margin-top: 0.7rem;">
+        <div style="color: var(--dimmer); font-size: 0.74rem; font-weight: 500; margin-bottom: 0.3rem;">${label}</div>
+        <table class="list"><tbody>${rows}</tbody></table>
+      </div>`;
+    });
+
+  return blocks.join('') || `<p class="muted" style="font-size:0.82rem; margin:0;">Inventory empty.</p>`;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1905,13 +2011,11 @@ function targetStatsBlock(target, current) {
   </div>`;
 }
 
-/* ── Action plan: Foundations + Gear + Consumables + Total ───────── */
 function actionPlanSection(foundations, gearNeeds, consumables, preset, havePrices) {
   const gearTotal = gearNeeds.total || 0;
   const consumablesTotal = consumables.total || 0;
   const grandTotal = gearTotal + consumablesTotal;
 
-  /* ── Foundations ─────────────────────────────────────────────── */
   let foundationsHtml = '';
   if (foundations.items.length === 0) {
     foundationsHtml = `<div class="action-list"><div class="action-row ok-row">
@@ -1925,13 +2029,13 @@ function actionPlanSection(foundations, gearNeeds, consumables, preset, havePric
       ${foundations.note ? `<p class="note">${escapeHtml(foundations.note)}</p>` : ''}`;
   }
 
-  /* ── Gear ────────────────────────────────────────────────────── */
   let gearHtml;
   if (gearNeeds.items.length === 0) {
     gearHtml = `<p class="placeholder-text ok">✓ No gear to acquire.</p>`;
   } else {
     const rows = gearNeeds.items.map(it => actionRow({
-      what: `${rarityColored(it.targetRarity, gearItemName(it.slot, it.targetRarity))} × ${fmtInt(it.qty)}`,
+      /* Gear row: plain item name + rarity tag, then quantity. */
+      what: `${escapeHtml(gearItemName(it.slot, it.targetRarity))}${rarityTag(it.targetRarity)} × ${fmtInt(it.qty)}`,
       detail: it.detail,
       cost: it.line != null ? it.line : null,
     })).join('');
@@ -1939,7 +2043,6 @@ function actionPlanSection(foundations, gearNeeds, consumables, preset, havePric
       ${gearNeeds.anyMissing ? '<p class="note">Some gear prices not in market data — those lines show "price unknown" and aren\'t in the total.</p>' : ''}`;
   }
 
-  /* ── Consumables ─────────────────────────────────────────────── */
   let consumablesHtml;
   if (consumables.items.length === 0) {
     consumablesHtml = `<p class="placeholder-text">No consumables needed for this build.</p>`;
@@ -1976,9 +2079,7 @@ function actionPlanSection(foundations, gearNeeds, consumables, preset, havePric
   `;
 }
 
-/* ── Daily during war — single column blocks ─────────────────────── */
 function dailyDuringWarSection(d, havePrices, params, preset) {
-  /* Money in */
   const inLines = [];
   if (d.factoriesHaveRevenue) {
     inLines.push(`<div class="flow-line"><span class="ll">Company revenue</span><span class="lv pos">${fmtSigned(d.factoryRevenue)}</span></div>`);
@@ -1987,7 +2088,6 @@ function dailyDuringWarSection(d, havePrices, params, preset) {
   }
   const moneyIn = d.factoriesHaveRevenue ? d.factoryRevenue : 0;
 
-  /* Money out */
   const outLines = [];
   if (d.factoriesHaveWage && d.factoryWageCost > 0) {
     outLines.push(`<div class="flow-line"><span class="ll">Worker wages</span><span class="lv neg">${fmtSigned(-d.factoryWageCost)}</span></div>`);
@@ -2007,7 +2107,6 @@ function dailyDuringWarSection(d, havePrices, params, preset) {
                  + (d.factoryIngCost || 0)
                  + (d.consumablesDaily || 0);
 
-  /* Working-for-others note */
   const wageNoteHtml = d.hasOwnWage
     ? `<div class="flow-note">
         <span>Working-for-others wage paused during war</span>

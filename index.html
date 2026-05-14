@@ -1649,40 +1649,7 @@ function wealthSection(data) {
     </tbody></table>`;
   }
 
-  // Case-opening history — handy luck/drop tracker.
-  const caseEntries = [];
-  ['case1', 'case2'].forEach(key => {
-    const c = stats[key];
-    if (!c || !c.openedCount) return;
-    const rarity = c.byRarity || {};
-    const parts = ['common','uncommon','rare','epic','legendary','mythic']
-      .filter(r => rarity[r] > 0)
-      .map(r => `${rarity[r]} ${r}`)
-      .join(', ');
-    caseEntries.push({ label: key === 'case1' ? 'Common cases' : 'Premium cases', opened: c.openedCount, parts });
-  });
-
-  let casesHtml = '';
-  if (caseEntries.length) {
-    const rows = caseEntries.map(c => `
-      <tr>
-        <td>${c.label}</td>
-        <td class="num">${fmtInt(c.opened)}</td>
-        <td>${escapeHtml(c.parts || '—')}</td>
-      </tr>
-    `).join('');
-    casesHtml = `
-      <div style="margin-top: 0.7rem;">
-        <div style="color: var(--dimmer); font-size: 0.74rem; font-weight: 500; margin-bottom: 0.3rem;">Cases opened</div>
-        <table class="list">
-          <thead><tr><th>Type</th><th>Opened</th><th>Drops</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  return wealthHtml + casesHtml;
+  return wealthHtml;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

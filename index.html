@@ -773,7 +773,6 @@ function fmtSigned(n, d = 2) {
   const sign = n > 0 ? '+' : '';
   return sign + fmt(n, d) + ' ₿';
 }
-const fmtGold = fmtBtc;
 function fmtCompact(n) {
   if (n == null || isNaN(n)) return '–';
   const abs = Math.abs(n);
@@ -1002,47 +1001,6 @@ const ECONOMY_STAT_DESCRIPTIONS = [
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
- *  INVENTORY CATEGORIZATION
- * ═══════════════════════════════════════════════════════════════════ */
-const MATERIAL_CODES = new Set([
-  'iron','steel','limestone','concrete','grain','livestock','coca','cocain',
-  'lead','oil','wood','stone','copper','gold','silver','rubber','plastic'
-]);
-const CONSUMABLE_CODES = new Set([
-  'pill','lightAmmo','ammo','heavyAmmo','bread','steak','fish','cookedFish'
-]);
-const WEAPON_CODES = new Set(Object.values(WEAPON_BY_RARITY));
-
-function categorizeItem(code) {
-  if (!code) return 'other';
-  const c = String(code);
-  if (/^(helmet|chest|pants|boots|gloves)\d$/.test(c)) return 'gear';
-  if (WEAPON_CODES.has(c)) return 'gear';
-  if (CONSUMABLE_CODES.has(c)) return 'consumable';
-  if (/case|Case|key|Key/.test(c)) return 'case';
-  if (MATERIAL_CODES.has(c)) return 'material';
-  return 'other';
-}
-
-/* Resolve a display name for an item code (works for gear, consumables,
-   weapons, and falls back to a humanized version of the code). */
-function displayNameForCode(code) {
-  if (!code) return '';
-  const c = String(code);
-  // Weapons
-  const weaponEntry = Object.entries(WEAPON_BY_RARITY).find(([, wc]) => wc === c);
-  if (weaponEntry) return WEAPON_DISPLAY[weaponEntry[1]];
-  // Slotted gear (helmet1, chest3, etc.)
-  const slotMatch = c.match(/^([a-z]+)\d$/);
-  if (slotMatch && SLOT_LABEL[slotMatch[1]]) return SLOT_LABEL[slotMatch[1]];
-  // Consumables
-  const cons = Object.values(CONSUMABLES).find(x => x.code === c);
-  if (cons) return cons.label;
-  // Humanize camelCase
-  return c.replace(/([A-Z])/g, ' $1').replace(/^./, m => m.toUpperCase());
-}
-
-/* ═══════════════════════════════════════════════════════════════════
  *  DATA LOAD
  * ═══════════════════════════════════════════════════════════════════ */
 async function resolveUserId(input) {
@@ -1056,14 +1014,9 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  /* inventory.fetchInventory is a guess based on the existing
-     inventory.fetchCurrentEquipment naming. If the endpoint name is
-     different, the call rejects silently and the section shows a
-     "data unavailable" placeholder — debug mode dumps the response. */
-  /* Note: the gateway only exposes inventory.fetchCurrentEquipment.
-     Full inventory contents (consumables, materials, spare gear) aren't
-     available via the API. If/when an endpoint is added upstream, we can
-     plumb it here. */
+  /* Gateway only exposes inventory.fetchCurrentEquipment. Full inventory
+     contents (consumables, materials, spare gear) aren't reachable via
+     the gateway — if/when an endpoint is added upstream, plumb it here. */
   const [user, inventory, companyList, pricesR, workersR] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
@@ -1130,7 +1083,6 @@ async function loadPlayer(userId) {
     workersByCompanyId,
     ownWage, ownFidelity,
     ownWorkOffer: ownWage != null ? { wage: ownWage, fidelity: ownFidelity, source: 'worker_record' } : null,
-    companyWorkOffers: {},
     prices: pricesR.status === 'fulfilled' ? normalizePrices(pricesR.value) : {},
     pricesError: pricesR.status === 'rejected' ? String(pricesR.reason?.message || pricesR.reason) : null,
     workersError: workersR.status === 'rejected' ? String(workersR.reason?.message || workersR.reason) : null,
@@ -1151,46 +1103,6 @@ function normalizePrices(raw) {
   if (raw.prices && typeof raw.prices === 'object') return raw.prices;
   if (typeof raw === 'object') return raw;
   return {};
-}
-
-/* Normalize an inventory response into [{code, count}, ...]. Handles:
-     - array of {code/itemCode/item, count/quantity/amount}
-     - object map {code: count}
-     - nested {items: [...]} */
-function normalizeInventory(raw) {
-  if (!raw) return [];
-  const tryNormalize = (val) => {
-    if (Array.isArray(val)) {
-      return val.map(it => ({
-        code: it?.code || it?.itemCode || it?.item,
-        count: Number(it?.count ?? it?.quantity ?? it?.amount ?? 0),
-      })).filter(it => it.code && it.count > 0);
-    }
-    if (val && typeof val === 'object') {
-      const entries = Object.entries(val);
-      // Only treat as code→count if values look numeric.
-      const looksNumeric = entries.every(([k, v]) =>
-        typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v))));
-      if (looksNumeric) {
-        return entries
-          .map(([code, count]) => ({ code, count: Number(count) }))
-          .filter(it => it.count > 0);
-      }
-    }
-    return null;
-  };
-
-  // Try direct
-  let out = tryNormalize(raw);
-  if (out && out.length) return out;
-  // Try nested under common keys
-  for (const key of ['items', 'inventory', 'data']) {
-    if (raw[key]) {
-      out = tryNormalize(raw[key]);
-      if (out && out.length) return out;
-    }
-  }
-  return [];
 }
 
 function offerWage(offer) {
@@ -1601,12 +1513,10 @@ function renderPlayer(data) {
     $('#debug-panel').classList.remove('hidden');
     $('#debug-content').textContent = JSON.stringify({
       userId: data.userId, user: data.user, inventory: data.inventory,
-      inventoryAll: data.inventoryAll,
       companies: data.companies, country: data.country, mu: data.mu,
       ownWorkOffer: data.ownWorkOffer, workersByCompanyId: data.workersByCompanyId,
       prices: data.prices,
       errors: { user: data.userError, inventory: data.inventoryError,
-        inventoryAll: data.inventoryAllError,
         companies: data.companiesError, prices: data.pricesError, workers: data.workersError }
     }, null, 2);
   }
@@ -1702,45 +1612,6 @@ function equipmentTable(eq) {
     <thead><tr><th>Slot</th><th>Item</th><th>Stat</th><th>Durability</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
-}
-
-/* Wealth section — surfaces user.stats.wealth (breakdown of your net
-   worth) and case-opening history. All data comes from user.getUserById,
-   no extra API call needed. */
-function wealthSection(data) {
-  const stats = data.user?.stats || {};
-  const wealth = stats.wealth;
-
-  let wealthHtml = '';
-  if (!wealth || typeof wealth !== 'object') {
-    wealthHtml = `<p class="muted" style="font-size:0.82rem; margin:0;">Wealth data unavailable.</p>`;
-  } else {
-    const rows = [
-      ['Companies', wealth.companies],
-      ['Items',     wealth.items],
-      ['Money',     wealth.money],
-      ['Equipment', wealth.equipments],
-      ['Weapons',   wealth.weapons],
-    ].filter(([, v]) => v != null);
-
-    const tbody = rows.map(([label, value]) => `
-      <tr>
-        <td>${label}</td>
-        <td class="num">${fmtBtc(value)}</td>
-      </tr>
-    `).join('');
-
-    wealthHtml = `<table class="list"><tbody>
-      ${tbody}
-      <tr class="total">
-        <td><strong>Total</strong></td>
-        <td class="num"><strong>${fmtBtc(wealth.total)}</strong></td>
-      </tr>
-    </tbody></table>`;
-  }
-
-  // Case-opening history removed — wealth card surfaces wealth only.
-  return wealthHtml;
 }
 
 /* Wealth section — surfaces user.stats.wealth (breakdown of your net

@@ -786,6 +786,24 @@ function fmtSigned(n, d = 2) {
   return sign + fmt(n, d) + ' ₿';
 }
 const fmtGold = fmtBtc;
+/* Compact number formatter for badge-style displays (21.6K, 1.24M). */
+function fmtCompact(n) {
+  if (n == null || isNaN(n)) return '–';
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return Math.round(n).toLocaleString();
+}
+/* Expected damage per hit, accounting for precision, crits, and miss-half. */
+function expectedDamagePerHit(d) {
+  const atk = d.atk || 0;
+  const prc = (d.prc || 0) / 100;
+  const cc  = (d.cc  || 0) / 100;
+  const cdMult = 1 + (d.cd || 0) / 100;
+  const landed = prc * ((1 - cc) * atk + cc * atk * cdMult);
+  const missed = (1 - prc) * atk * 0.5;
+  return landed + missed;
+}
 function flag(code) {
   if (!code || code.length !== 2) return '🏳️';
   return code.toUpperCase().split('').map(c =>
@@ -1568,7 +1586,9 @@ function renderCombat(p, data) {
       ${equipmentTable(eq)}
     </div>
   `;
-  $('#combat-badge').textContent = `${fmtInt(d.atk)} attack`;
+  const hitsPerDay = actionsPerDay(p.eco.energy);
+  const dmgPerDay = expectedDamagePerHit(d) * hitsPerDay;
+  $('#combat-badge').textContent = `${fmtCompact(dmgPerDay)} dmg/day`;
 }
 
 function skillRow(label, value) {

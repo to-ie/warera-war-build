@@ -703,6 +703,13 @@
           <div id="economy-content"></div>
         </div>
       </div>
+      <div class="card" style="margin-top: 1rem;">
+        <h3>
+          <span>Wealth <span id="wealth-info"></span></span>
+          <span class="badge" id="wealth-badge"></span>
+        </h3>
+        <div id="wealth-content"></div>
+      </div>
     </details>
 
     <details class="state-section" id="target-section" open>
@@ -1570,6 +1577,16 @@ function renderPlayer(data) {
 
   $('#combat-info').innerHTML = infoBtn(COMBAT_STAT_DESCRIPTIONS, 'Combat stat reference');
   $('#economy-info').innerHTML = infoBtn(ECONOMY_STAT_DESCRIPTIONS, 'Economy stat reference');
+  $('#wealth-info').innerHTML = infoBtn([
+    { term: 'Source', desc: 'Reported by the API — recomputed by the game periodically.' },
+    { term: 'Companies', desc: 'Estimated resale value of your built companies.' },
+    { term: 'Items', desc: 'Consumables and materials in your inventory.' },
+    { term: 'Money', desc: 'Liquid bitcoin in your wallet.' },
+    { term: 'Equipment / Weapons', desc: 'Resale value of currently-equipped gear.' },
+  ], 'Wealth help');
+  const wealthTotal = data.user?.stats?.wealth?.total;
+  $('#wealth-badge').textContent = wealthTotal != null ? `${fmtCompact(wealthTotal)} ₿` : '';
+  $('#wealth-content').innerHTML = wealthSection(data);
   $('#target-info').innerHTML = infoBtn([
     { term: 'Pick a preset', desc: 'War Basic (default, self-funding) or War High-Damage (pill push, expensive but high output).' },
     { term: 'Follow the plan', desc: 'Foundations to fix → gear to stockpile → consumables to buy. Each section has its own cost.' },
@@ -1641,17 +1658,6 @@ function renderCombat(p, data) {
     <div class="section">
       <div class="section-label">Equipped gear</div>
       ${equipmentTable(eq)}
-    </div>
-
-    <div class="section">
-      <div class="section-label">Wealth ${infoBtn([
-        { term: 'Source', desc: 'Reported by the API — recomputed by the game periodically.' },
-        { term: 'Companies', desc: 'Estimated resale value of your built companies (concrete invested + upgrades + production).' },
-        { term: 'Items', desc: 'Consumables and materials sitting in your inventory (ammo, food, ore, etc.).' },
-        { term: 'Money', desc: 'Liquid bitcoin in your wallet right now.' },
-        { term: 'Equipment / Weapons', desc: 'Resale value of currently-equipped gear.' },
-      ])}</div>
-      ${wealthSection(data)}
     </div>
   `;
   $('#combat-badge').textContent = `${fmtCompact(dmgPerDay)} dmg/day`;
@@ -1733,40 +1739,8 @@ function wealthSection(data) {
     </tbody></table>`;
   }
 
-  // Case-opening history — handy luck/drop tracker.
-  const caseEntries = [];
-  ['case1', 'case2'].forEach(key => {
-    const c = stats[key];
-    if (!c || !c.openedCount) return;
-    const rarity = c.byRarity || {};
-    const parts = ['common','uncommon','rare','epic','legendary','mythic']
-      .filter(r => rarity[r] > 0)
-      .map(r => `${rarity[r]} ${r}`)
-      .join(', ');
-    caseEntries.push({ label: key === 'case1' ? 'Common cases' : 'Premium cases', opened: c.openedCount, parts });
-  });
-
-  let casesHtml = '';
-  if (caseEntries.length) {
-    const rows = caseEntries.map(c => `
-      <tr>
-        <td>${c.label}</td>
-        <td class="num">${fmtInt(c.opened)}</td>
-        <td>${escapeHtml(c.parts || '—')}</td>
-      </tr>
-    `).join('');
-    casesHtml = `
-      <div style="margin-top: 0.7rem;">
-        <div style="color: var(--dimmer); font-size: 0.74rem; font-weight: 500; margin-bottom: 0.3rem;">Cases opened</div>
-        <table class="list">
-          <thead><tr><th>Type</th><th>Opened</th><th>Drops</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  return wealthHtml + casesHtml;
+  // Case-opening history removed — wealth card surfaces wealth only.
+  return wealthHtml;
 }
 
 /* Wealth section — surfaces user.stats.wealth (breakdown of your net

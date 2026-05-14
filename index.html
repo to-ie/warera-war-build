@@ -1053,10 +1053,13 @@ async function loadPlayer(userId) {
      inventory.fetchCurrentEquipment naming. If the endpoint name is
      different, the call rejects silently and the section shows a
      "data unavailable" placeholder — debug mode dumps the response. */
-  const [user, inventory, inventoryAll, companyList, pricesR, workersR] = await Promise.allSettled([
+  /* Note: the gateway only exposes inventory.fetchCurrentEquipment.
+     Full inventory contents (consumables, materials, spare gear) aren't
+     available via the API. If/when an endpoint is added upstream, we can
+     plumb it here. */
+  const [user, inventory, companyList, pricesR, workersR] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
-    trpc('inventory.fetchInventory', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
     trpc('itemTrading.getPrices'),
     trpc('worker.getWorkers', { userId }),
@@ -1113,8 +1116,6 @@ async function loadPlayer(userId) {
     userError: user.status === 'rejected' ? String(user.reason?.message || user.reason) : null,
     inventory: inventory.status === 'fulfilled' ? inventory.value : null,
     inventoryError: inventory.status === 'rejected' ? String(inventory.reason?.message || inventory.reason) : null,
-    inventoryAll: inventoryAll.status === 'fulfilled' ? inventoryAll.value : null,
-    inventoryAllError: inventoryAll.status === 'rejected' ? String(inventoryAll.reason?.message || inventoryAll.reason) : null,
     companies,
     companiesError: companyList.status === 'rejected' ? String(companyList.reason?.message || companyList.reason) : null,
     country, mu,
@@ -1643,8 +1644,14 @@ function renderCombat(p, data) {
     </div>
 
     <div class="section">
-      <div class="section-label">Inventory</div>
-      ${inventorySection(data)}
+      <div class="section-label">Wealth ${infoBtn([
+        { term: 'Source', desc: 'Reported by the API — recomputed by the game periodically.' },
+        { term: 'Companies', desc: 'Estimated resale value of your built companies (concrete invested + upgrades + production).' },
+        { term: 'Items', desc: 'Consumables and materials sitting in your inventory (ammo, food, ore, etc.).' },
+        { term: 'Money', desc: 'Liquid bitcoin in your wallet right now.' },
+        { term: 'Equipment / Weapons', desc: 'Resale value of currently-equipped gear.' },
+      ])}</div>
+      ${wealthSection(data)}
     </div>
   `;
   $('#combat-badge').textContent = `${fmtCompact(dmgPerDay)} dmg/day`;

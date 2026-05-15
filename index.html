@@ -991,7 +991,7 @@ const RECIPES = {
 };
 
 const FACTORY_ASSUMPTIONS = {
-  workerActionsPerDay: 12,
+  workerActionsPerDay: 24,
   workerProduction: 15,
   outputCalibration: 1.0,
 };
@@ -1366,7 +1366,9 @@ function buildLabel(player) {
 }
 
 function actionsPerDay(bar, usagePct = 1) {
-  return Math.floor(bar / 10) * 2.4 * usagePct;
+  // Bar regens at 10% of max per hour. Each action costs 7 of the bar.
+  // → daily regen = bar × 0.1 × 24 = bar × 2.4, then divide by 7.
+  return (bar * 2.4 / 7) * usagePct;
 }
 
 function effectiveHitsPerDay(player, params) {

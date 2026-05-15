@@ -1633,7 +1633,9 @@ function renderPlayer(data) {
     // Surface the first worker's full payload at the top so we can see
     // exactly what fields the API returns per worker (looking for a
     // `production` field to replace the hardcoded 25 PP default).
-    const firstCompanyWorkers = Object.values(data.workersByCompanyId || {})[0];
+    // Find the first non-empty worker array across all companies.
+    const allWorkerArrays = Object.values(data.workersByCompanyId || {});
+    const firstCompanyWorkers = allWorkerArrays.find(arr => arr && arr.length > 0);
     const workerSample = firstCompanyWorkers?.[0] || null;
     if (workerSample) {
       console.log('%c[Worker sample] keys:', 'color:#4ad395', Object.keys(workerSample));

@@ -290,7 +290,7 @@
     font: inherit;
     font-family: var(--mono);
   }
-  .plan-control input[type=number] { width: 60px; text-align: right; }
+  .plan-control input[type=number] { width: 60px; text-align: right; -moz-appearance: textfield; appearance: textfield; }
   .plan-control input[type=number]::-webkit-inner-spin-button,
   .plan-control input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .plan-control select:focus,
@@ -1206,6 +1206,22 @@ async function loadPlayer(userId) {
     }
   }
 
+  // Workplace region → country. If foreign, fetch the country so we can
+  // apply the right taxes/bonuses to the job wage.
+  let workplaceRegion = null;
+  let workplaceCountry = null;
+  if (workplaceCompany?.region) {
+    try {
+      workplaceRegion = await trpc('region.getRegionById', { regionId: workplaceCompany.region });
+      const wrCountryId = workplaceRegion?.country || workplaceRegion?.countryId;
+      if (wrCountryId && u?.country && wrCountryId !== u.country) {
+        workplaceCountry = await trpc('country.getCountryById', { countryId: wrCountryId });
+      }
+    } catch (e) {
+      if (DEBUG) console.warn('Failed to fetch workplace region/country:', e);
+    }
+  }
+
   return {
     userId,
     user: u,
@@ -1216,6 +1232,8 @@ async function loadPlayer(userId) {
     companiesError: companyList.status === 'rejected' ? String(companyList.reason?.message || companyList.reason) : null,
     country, mu,
     workplaceCompany,
+    workplaceRegion,
+    workplaceCountry,
     workersByCompanyId,
     ownWage, ownFidelity,
     ownWorkOffer: ownWage != null ? { wage: ownWage, fidelity: ownFidelity, source: 'worker_record' } : null,
@@ -1611,8 +1629,9 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
   const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
   const workActionsPeace = actionsPerDay(player.eco.energy, workplaceBR);
   const playerProd = player.eco.production || 0;
-  const incomeTax = data.country?.taxes?.income || 0;
-  const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
+  const workCountry = data.workplaceCountry || data.country;
+  const incomeTax = workCountry?.taxes?.income || 0;
+  const prodBonusPct = workCountry?.strategicResources?.bonuses?.productionPercent || 0;
   const wageMod = (1 - incomeTax / 100) * (1 + prodBonusPct / 100);
   const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace * playerProd * wageMod : null;
 
@@ -1707,12 +1726,13 @@ function renderCurrentState(p, data) {
   const dmgPerDay = expectedDamagePerHit(p.derived) * hitsPerDay;
 
   const ownWage = offerWage(data.ownWorkOffer);
-  // Job wage: per-PP wage × your Production × actions/day, times country
-  // bonuses/taxes. Uses the workplace company's Break Room level to compute
-  // actions/day (lower Break Room cost = more actions per day = more wage).
+  // Job wage modifiers use the EMPLOYER's country, not yours. If we managed
+  // to detect a foreign employer, data.workplaceCountry is set; otherwise
+  // we fall back to your own country (domestic employer assumption).
   const playerProd = p.eco.production || 0;
-  const incomeTax = data.country?.taxes?.income || 0;
-  const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
+  const workCountry = data.workplaceCountry || data.country;
+  const incomeTax = workCountry?.taxes?.income || 0;
+  const prodBonusPct = workCountry?.strategicResources?.bonuses?.productionPercent || 0;
   const wageMod = (1 - incomeTax / 100) * (1 + prodBonusPct / 100);
   const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
   const dailyWageIncome = ownWage != null
@@ -1881,17 +1901,41 @@ function renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet) 
   const factoryIngCost = comps.reduce((s, c) => s + (c.dailyIngredientCost || 0), 0);
 
   // Surface country modifiers so the user can see what's being applied.
-  const incomeTax = data.country?.taxes?.income || 0;
-  const marketTax = data.country?.taxes?.market || 0;
-  const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
-  const countryName = data.country?.name || 'your country';
-  const modParts = [];
-  if (prodBonusPct) modParts.push(`+${prodBonusPct}% production`);
-  if (marketTax) modParts.push(`−${marketTax}% market tax`);
-  if (incomeTax) modParts.push(`−${incomeTax}% income tax`);
-  const modifiersNote = modParts.length
-    ? `<p class="note" style="margin-top: 0; margin-bottom: 0.7rem;">${escapeHtml(countryName)} modifiers applied: ${modParts.join(' · ')}.</p>`
-    : '';
+  // Job wage uses employer's country (foreign or own); company revenue
+  // uses your own country (market tax + your prod bonus).
+  const isForeignEmployer = !!data.workplaceCountry;
+  const employerCountry = data.workplaceCountry || data.country;
+  const ownCountry = data.country;
+  const employerName = employerCountry?.name || 'your country';
+  const ownName = ownCountry?.name || 'your country';
+
+  const wageProdBonus = employerCountry?.strategicResources?.bonuses?.productionPercent || 0;
+  const wageIncomeTax = employerCountry?.taxes?.income || 0;
+  const ownProdBonus = ownCountry?.strategicResources?.bonuses?.productionPercent || 0;
+  const ownMarketTax = ownCountry?.taxes?.market || 0;
+
+  let modifiersNote = '';
+  if (isForeignEmployer) {
+    const wageMods = [];
+    if (wageProdBonus) wageMods.push(`+${wageProdBonus}% prod`);
+    if (wageIncomeTax) wageMods.push(`−${wageIncomeTax}% income tax`);
+    const compMods = [];
+    if (ownProdBonus) compMods.push(`+${ownProdBonus}% prod`);
+    if (ownMarketTax) compMods.push(`−${ownMarketTax}% market tax`);
+    modifiersNote = `<p class="note" style="margin-top: 0; margin-bottom: 0.7rem;">
+      <strong style="color: var(--warn);">Foreign employer (${escapeHtml(employerName)})</strong>:
+      wage uses ${wageMods.join(' · ') || 'no modifiers'}.
+      Your companies (${escapeHtml(ownName)}): ${compMods.join(' · ') || 'no modifiers'}.
+    </p>`;
+  } else {
+    const modParts = [];
+    if (ownProdBonus) modParts.push(`+${ownProdBonus}% production`);
+    if (ownMarketTax) modParts.push(`−${ownMarketTax}% market tax`);
+    if (wageIncomeTax) modParts.push(`−${wageIncomeTax}% income tax`);
+    modifiersNote = modParts.length
+      ? `<p class="note" style="margin-top: 0; margin-bottom: 0.7rem;">${escapeHtml(ownName)} modifiers applied: ${modParts.join(' · ')}.</p>`
+      : '';
+  }
 
   return `
     ${modifiersNote}

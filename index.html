@@ -1007,7 +1007,9 @@ const RECIPES = {
 
 const FACTORY_ASSUMPTIONS = {
   workerActionsPerDay: 24,
-  workerProduction: 15,
+  // PP a worker generates per action. Real workers vary (newbies ~15,
+  // veterans ~30). 25 is a rough average derived from observed transactions.
+  workerProduction: 25,
   outputCalibration: 1.0,
 };
 
@@ -1314,8 +1316,11 @@ function extractCompanies(data) {
         const wage = Number(w.wage) || 0;
         const pp = A.workerActionsPerDay * A.workerProduction * (1 + fid / 100);
         workerPP += pp;
-        wageSum += wage * A.workerActionsPerDay;
-        workerDetails.push({ fidelity: fid, wage, dailyWage: wage * A.workerActionsPerDay, pp });
+        // Wage is per Production Point, not per action.
+        // Daily wage = wage_per_PP × PP_produced_per_day.
+        const dailyWage = wage * pp;
+        wageSum += dailyWage;
+        workerDetails.push({ fidelity: fid, wage, dailyWage, pp });
       });
       dailyWageCost = wageSum;
     } else if (workerCount > 0) {

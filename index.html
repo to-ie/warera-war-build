@@ -999,10 +999,32 @@ const CONSUMABLES = {
 
 const AE_TABLE = { 0: 0, 1: 24, 2: 48, 3: 72, 4: 96, 5: 120, 6: 144, 7: 168, 8: 192, 9: 216, 10: 240 };
 
+/* RECIPES — verified from in-game UI screenshots.
+   `ppPer` = PP consumed per output unit. `ingredients` = qty per output unit.
+   Items with empty ingredients are raw materials (1 PP → 1 unit). */
 const RECIPES = {
-  steel: { iron: 1 }, concrete: { limestone: 1 },
-  lightAmmo: { steel: 1 }, ammo: { steel: 1, lead: 1 }, heavyAmmo: { steel: 2, lead: 1 },
-  bread: { grain: 1 }, steak: { livestock: 1 }, cookedFish: { fish: 1 }, cocain: { coca: 1 },
+  // Raw materials
+  iron:            { ppPer: 1,  ingredients: {} },
+  limestone:       { ppPer: 1,  ingredients: {} },
+  lead:            { ppPer: 1,  ingredients: {} },
+  petroleum:       { ppPer: 1,  ingredients: {} },
+  grain:           { ppPer: 1,  ingredients: {} },
+  livestock:       { ppPer: 1,  ingredients: {} },
+  fish:            { ppPer: 1,  ingredients: {} },
+  mysteriousPlant: { ppPer: 1,  ingredients: {} },
+
+  // Processed — all verified from in-game tooltips
+  oil:        { ppPer: 1,   ingredients: { petroleum: 1 } },
+  steel:      { ppPer: 10,  ingredients: { iron: 10 } },
+  concrete:   { ppPer: 10,  ingredients: { limestone: 10 } },
+  bread:      { ppPer: 10,  ingredients: { grain: 10 } },
+  steak:      { ppPer: 20,  ingredients: { livestock: 1 } },
+  cookedFish: { ppPer: 40,  ingredients: { fish: 1 } },
+  // All ammo uses LEAD (the gray ingot icon in-game is lead, not steel)
+  lightAmmo:  { ppPer: 1,   ingredients: { lead: 1 } },
+  ammo:       { ppPer: 4,   ingredients: { lead: 4 } },
+  heavyAmmo:  { ppPer: 16,  ingredients: { lead: 16 } },
+  pill:       { ppPer: 200, ingredients: { mysteriousPlant: 200 } },
 };
 
 const FACTORY_ASSUMPTIONS = {
@@ -1297,13 +1319,20 @@ function extractCompanies(data) {
   const workersByCompany = data.workersByCompanyId || {};
   const A = FACTORY_ASSUMPTIONS;
 
+  // Country modifiers — production bonus from strategic resources lifts PP
+  // generated (AE + workers); market tax is taken from sale revenue.
+  const marketTax = data.country?.taxes?.market || 0;
+  const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
+  const prodMult = 1 + prodBonusPct / 100;
+  const marketMult = 1 - marketTax / 100;
+
   return items.map(co => {
     const id = co._id;
     const itemCodeStr = co.itemCode ?? '?';
     const workerCount = co.workerCount ?? 0;
     const aeLevel = co.activeUpgradeLevels?.automatedEngine ?? 0;
     const price = prices[itemCodeStr] != null ? Number(prices[itemCodeStr]) : null;
-    const aePP = AE_TABLE[aeLevel] ?? (aeLevel * 24);
+    const aePP = (AE_TABLE[aeLevel] ?? (aeLevel * 24)) * prodMult;
 
     const workers = workersByCompany[id] || [];
     let workerPP = 0;
@@ -1314,30 +1343,34 @@ function extractCompanies(data) {
       workers.forEach(w => {
         const fid = Number(w.fidelity) || 0;
         const wage = Number(w.wage) || 0;
-        const pp = A.workerActionsPerDay * A.workerProduction * (1 + fid / 100);
+        const pp = A.workerActionsPerDay * A.workerProduction * (1 + fid / 100) * prodMult;
         workerPP += pp;
-        // Wage is per Production Point, not per action.
-        // Daily wage = wage_per_PP × PP_produced_per_day.
         const dailyWage = wage * pp;
         wageSum += dailyWage;
         workerDetails.push({ fidelity: fid, wage, dailyWage, pp });
       });
       dailyWageCost = wageSum;
     } else if (workerCount > 0) {
-      workerPP = workerCount * A.workerActionsPerDay * A.workerProduction;
+      workerPP = workerCount * A.workerActionsPerDay * A.workerProduction * prodMult;
     }
 
-    const dailyOutput = (aePP + workerPP) * A.outputCalibration;
-    const dailyRevenue = price != null ? dailyOutput * price : null;
-
+    const totalPP = aePP + workerPP;
     const recipe = RECIPES[itemCodeStr];
-    const isProcessed = !!recipe;
+    const ppPer = recipe?.ppPer ?? 1;
+    const ingredients = recipe?.ingredients || {};
+    const isProcessed = Object.keys(ingredients).length > 0;
+
+    // dailyOutput = total PP generated, divided by PP cost per output unit.
+    // For raw materials ppPer = 1 (1 PP → 1 unit). For steel ppPer = 10.
+    const dailyOutput = (totalPP / ppPer) * A.outputCalibration;
+    const dailyRevenue = price != null ? dailyOutput * price * marketMult : null;
+
     const recipeBreakdown = [];
     let dailyIngredientCost = null;
-    if (recipe) {
+    if (isProcessed) {
       let allPriced = true;
       let cost = 0;
-      for (const [ing, qty] of Object.entries(recipe)) {
+      for (const [ing, qty] of Object.entries(ingredients)) {
         const ingPrice = prices[ing] != null ? Number(prices[ing]) : null;
         recipeBreakdown.push({ ingredient: ing, qty, price: ingPrice });
         if (ingPrice == null) { allPriced = false; }
@@ -1385,10 +1418,12 @@ function buildLabel(player) {
   return                       { label: 'Hybrid build', sub: `${fp}% fight / ${ep}% eco` };
 }
 
-function actionsPerDay(bar, usagePct = 1) {
-  // Bar regens at 10%/hour (verified from in-game display: Energy 90 → +9/hr,
-  // Entr 55 → +5.5/hr). Each action costs 7. Daily = bar × 0.10 × 24 / 7.
-  return (bar * 2.4 / 7) * usagePct;
+function actionsPerDay(bar, breakRoomLevel = 1) {
+  // Bar regens at 10%/hour (verified: API returns hourlyBarRegen matching
+  // bar × 0.10). Energy cost per action depends on the company's Break Room
+  // upgrade: cost = max(1, 8 − breakRoom). Default breakRoom 1 → 7/action.
+  const cost = Math.max(1, 8 - breakRoomLevel);
+  return (bar * 2.4) / cost;
 }
 
 function effectiveHitsPerDay(player, params) {
@@ -1573,9 +1608,13 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
   const factoriesHaveWage = comps.some(c => c.dailyWageCost != null);
 
   const ownWage = offerWage(data.ownWorkOffer);
-  const workActionsPeace = actionsPerDay(player.eco.energy);
+  const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
+  const workActionsPeace = actionsPerDay(player.eco.energy, workplaceBR);
   const playerProd = player.eco.production || 0;
-  const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace * playerProd : null;
+  const incomeTax = data.country?.taxes?.income || 0;
+  const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
+  const wageMod = (1 - incomeTax / 100) * (1 + prodBonusPct / 100);
+  const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace * playerProd * wageMod : null;
 
   const lootIncome = WAR_LOOT_INCOME_PER_DAY;
   const peaceNet = (wageIncomePeace ?? 0) + factoryNet;
@@ -1668,9 +1707,17 @@ function renderCurrentState(p, data) {
   const dmgPerDay = expectedDamagePerHit(p.derived) * hitsPerDay;
 
   const ownWage = offerWage(data.ownWorkOffer);
-  // Job wage is per Production Point, paid for each PP generated per action.
+  // Job wage: per-PP wage × your Production × actions/day, times country
+  // bonuses/taxes. Uses the workplace company's Break Room level to compute
+  // actions/day (lower Break Room cost = more actions per day = more wage).
   const playerProd = p.eco.production || 0;
-  const dailyWageIncome = ownWage != null ? ownWage * actionsPerDay(p.eco.energy) * playerProd : 0;
+  const incomeTax = data.country?.taxes?.income || 0;
+  const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
+  const wageMod = (1 - incomeTax / 100) * (1 + prodBonusPct / 100);
+  const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
+  const dailyWageIncome = ownWage != null
+    ? ownWage * actionsPerDay(p.eco.energy, workplaceBR) * playerProd * wageMod
+    : 0;
   const factoryNet = comps.reduce((s, c) => s + (c.dailyNet || 0), 0);
   const totalDailyIncome = factoryNet + dailyWageIncome;
   const incomeSign = totalDailyIncome >= 0 ? 'pos' : 'neg';
@@ -1825,18 +1872,35 @@ function renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet) 
   const eco = p.eco;
   const workActions = actionsPerDay(eco.energy, 1);
   const entreActions = actionsPerDay(eco.entrepreneurship, 1);
+  // For the Job wage line: actions/day depends on YOUR EMPLOYER's Break Room.
+  const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
+  const wageActions = actionsPerDay(eco.energy, workplaceBR);
 
   const factoryRevenue = comps.reduce((s, c) => s + (c.dailyRevenue || 0), 0);
   const factoryWageCost = comps.reduce((s, c) => s + (c.dailyWageCost || 0), 0);
   const factoryIngCost = comps.reduce((s, c) => s + (c.dailyIngredientCost || 0), 0);
 
+  // Surface country modifiers so the user can see what's being applied.
+  const incomeTax = data.country?.taxes?.income || 0;
+  const marketTax = data.country?.taxes?.market || 0;
+  const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
+  const countryName = data.country?.name || 'your country';
+  const modParts = [];
+  if (prodBonusPct) modParts.push(`+${prodBonusPct}% production`);
+  if (marketTax) modParts.push(`−${marketTax}% market tax`);
+  if (incomeTax) modParts.push(`−${incomeTax}% income tax`);
+  const modifiersNote = modParts.length
+    ? `<p class="note" style="margin-top: 0; margin-bottom: 0.7rem;">${escapeHtml(countryName)} modifiers applied: ${modParts.join(' · ')}.</p>`
+    : '';
+
   return `
+    ${modifiersNote}
     <div class="bs-grid" style="margin-bottom: 0.85rem;">
       <div class="bs-block">
         <h5>Daily inflow</h5>
         ${ownWage != null ? `
           <div class="bs-line">
-            <span class="ll">Job wage<span class="qty" style="color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem;">${fmt(ownWage, 3)} ₿/PP × ${eco.production} PP × ${fmt(workActions, 1)}</span></span>
+            <span class="ll">Job wage<span class="qty" style="color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem;">${fmt(ownWage, 3)} ₿/PP × ${eco.production} PP × ${fmt(wageActions, 1)} (BR ${workplaceBR})</span></span>
             <span class="lv pos">${fmtSigned(dailyWageIncome)}</span>
           </div>` : ''}
         <div class="bs-line">

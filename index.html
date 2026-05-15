@@ -1630,7 +1630,18 @@ function renderPlayer(data) {
 
   if (DEBUG) {
     $('#debug-panel').classList.remove('hidden');
+    // Surface the first worker's full payload at the top so we can see
+    // exactly what fields the API returns per worker (looking for a
+    // `production` field to replace the hardcoded 25 PP default).
+    const firstCompanyWorkers = Object.values(data.workersByCompanyId || {})[0];
+    const workerSample = firstCompanyWorkers?.[0] || null;
+    if (workerSample) {
+      console.log('%c[Worker sample] keys:', 'color:#4ad395', Object.keys(workerSample));
+      console.log('[Worker sample] full object:', workerSample);
+    }
     $('#debug-content').textContent = JSON.stringify({
+      _WORKER_SAMPLE: workerSample,
+      _WORKER_SAMPLE_KEYS: workerSample ? Object.keys(workerSample) : [],
       userId: data.userId, user: data.user, inventory: data.inventory,
       companies: data.companies, country: data.country, mu: data.mu,
       ownWorkOffer: data.ownWorkOffer, workersByCompanyId: data.workersByCompanyId,

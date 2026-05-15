@@ -1006,7 +1006,7 @@ const RECIPES = {
 };
 
 const FACTORY_ASSUMPTIONS = {
-  workerActionsPerDay: 12,
+  workerActionsPerDay: 24,
   workerProduction: 15,
   outputCalibration: 1.0,
 };
@@ -1381,9 +1381,9 @@ function buildLabel(player) {
 }
 
 function actionsPerDay(bar, usagePct = 1) {
-  // Empirical: 1 action available every ~2 hours regardless of bar size.
-  // At Energy 90 → 12 actions/day. Derived rate: bar / 7.5 per day.
-  return (bar / 7.5) * usagePct;
+  // Bar regens at 10%/hour (verified from in-game display: Energy 90 → +9/hr,
+  // Entr 55 → +5.5/hr). Each action costs 7. Daily = bar × 0.10 × 24 / 7.
+  return (bar * 2.4 / 7) * usagePct;
 }
 
 function effectiveHitsPerDay(player, params) {

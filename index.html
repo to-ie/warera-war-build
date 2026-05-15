@@ -191,6 +191,21 @@
   .cc-summary .mono { font-family: var(--mono); }
   .cc-summary .pos { color: var(--accent); }
   .cc-summary .neg { color: var(--error); }
+  .cc-pill {
+    display: inline-block;
+    padding: 0.1rem 0.55rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: var(--mono);
+    color: var(--text);
+    margin-right: 0.15rem;
+  }
+  .cc-pill.pos { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .cc-pill.neg { background: var(--error-soft); border-color: var(--error); color: var(--error); }
+  .cc-pill.accent { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
   .cc-aux {
     color: var(--dimmer);
     font-family: var(--mono);
@@ -1644,26 +1659,26 @@ function renderCurrentState(p, data) {
   $('#state-content').innerHTML = `
     ${compactCard('build',
       `<span class="cc-title">Build</span>
-       <span class="cc-summary">${escapeHtml(build.label)} · <span class="muted">${escapeHtml(build.sub)}</span></span>
+       <span class="cc-summary"><span class="cc-pill accent">${escapeHtml(build.label)}</span> <span class="muted">${escapeHtml(build.sub)}</span></span>
        <span class="cc-aux">Lvl ${p.level}</span>`,
       renderBuildBody(p)
     )}
 
     ${compactCard('damage',
       `<span class="cc-title">Damage</span>
-       <span class="cc-summary"><span class="mono">${fmtCompact(dmgPerDay)} dmg/day</span> · <span class="muted">${fmtInt(p.derived.atk)} atk · ${fmt(hitsPerDay, 1)} hits</span></span>`,
+       <span class="cc-summary"><span class="cc-pill">${fmtCompact(dmgPerDay)} dmg/day</span> <span class="muted">${fmtInt(p.derived.atk)} atk · ${fmt(hitsPerDay, 1)} hits</span></span>`,
       renderDamageBody(p, eq)
     )}
 
     ${compactCard('income',
       `<span class="cc-title">Income</span>
-       <span class="cc-summary"><span class="mono ${incomeSign}">${fmtSigned(totalDailyIncome)}/day</span> · <span class="muted">${comps.length} compan${comps.length === 1 ? 'y' : 'ies'}${dailyWageIncome > 0 ? ` + job (${fmtBtc(dailyWageIncome)})` : ''}</span></span>`,
+       <span class="cc-summary"><span class="cc-pill ${incomeSign}">${fmtSigned(totalDailyIncome)}/day</span> <span class="muted">${comps.length} compan${comps.length === 1 ? 'y' : 'ies'}${dailyWageIncome > 0 ? ` + job (${fmtBtc(dailyWageIncome)})` : ''}</span></span>`,
       renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet)
     )}
 
     ${compactCard('wealth',
       `<span class="cc-title">Wealth</span>
-       <span class="cc-summary"><span class="mono">${wealthTotal != null ? fmtCompact(wealthTotal) + ' ₿' : 'unavailable'}</span></span>`,
+       <span class="cc-summary"><span class="cc-pill">${wealthTotal != null ? fmtCompact(wealthTotal) + ' ₿' : 'unavailable'}</span></span>`,
       renderWealthBody(data)
     )}
   `;

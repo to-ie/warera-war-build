@@ -1574,7 +1574,8 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
 
   const ownWage = offerWage(data.ownWorkOffer);
   const workActionsPeace = actionsPerDay(player.eco.energy);
-  const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace : null;
+  const playerProd = player.eco.production || 0;
+  const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace * playerProd : null;
 
   const lootIncome = WAR_LOOT_INCOME_PER_DAY;
   const peaceNet = (wageIncomePeace ?? 0) + factoryNet;
@@ -1654,7 +1655,9 @@ function renderCurrentState(p, data) {
   const dmgPerDay = expectedDamagePerHit(p.derived) * hitsPerDay;
 
   const ownWage = offerWage(data.ownWorkOffer);
-  const dailyWageIncome = ownWage != null ? ownWage * actionsPerDay(p.eco.energy) : 0;
+  // Job wage is per Production Point, paid for each PP generated per action.
+  const playerProd = p.eco.production || 0;
+  const dailyWageIncome = ownWage != null ? ownWage * actionsPerDay(p.eco.energy) * playerProd : 0;
   const factoryNet = comps.reduce((s, c) => s + (c.dailyNet || 0), 0);
   const totalDailyIncome = factoryNet + dailyWageIncome;
   const incomeSign = totalDailyIncome >= 0 ? 'pos' : 'neg';
@@ -1820,7 +1823,7 @@ function renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet) 
         <h5>Daily inflow</h5>
         ${ownWage != null ? `
           <div class="bs-line">
-            <span class="ll">Job wage<span class="qty" style="color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem;">${fmt(ownWage, 3)} × ${fmt(workActions, 1)}</span></span>
+            <span class="ll">Job wage<span class="qty" style="color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem;">${fmt(ownWage, 3)} ₿/PP × ${eco.production} PP × ${fmt(workActions, 1)}</span></span>
             <span class="lv pos">${fmtSigned(dailyWageIncome)}</span>
           </div>` : ''}
         <div class="bs-line">
@@ -1876,7 +1879,7 @@ function companyBreakdownRows(c) {
   rows.push({ term: 'Engine', desc: c.aeLevel ? `AE ${c.aeLevel} → ${fmtInt(c.aePP)} units/day` : 'No automated engine' });
 
   if (c.workers && c.workers.length) {
-    const fidList = c.workers.map(w => `fid ${w.fidelity} @ ${fmt(w.wage, 3)} ₿/act`).join(', ');
+    const fidList = c.workers.map(w => `fid ${w.fidelity} @ ${fmt(w.wage, 3)} ₿/PP`).join(', ');
     rows.push({ term: 'Workers', desc: `${c.workers.length} (${fidList}) → +${fmtInt(c.workerPP)} units/day, wages ${fmtBtc(c.dailyWageCost)}/day` });
   } else if (c.workerCount > 0) {
     rows.push({ term: 'Workers', desc: `${c.workerCount} worker(s), details not loaded` });

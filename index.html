@@ -939,8 +939,50 @@ async function trpc(endpoint, params = {}) {
  *  GAME CONSTANTS
  * ═══════════════════════════════════════════════════════════════════ */
 const ECO_BASE = { energy: 30, entrepreneurship: 30, production: 10, companies: 2, management: 4 };
+const ECO_GAIN = { energy: 10, entrepreneurship: 5, production: 3, companies: 1, management: 2 };
+// Fight skill base values and per-level gains, derived from in-game screenshots:
+//   Lvl 22 (Atk lvl 5): Atk 225, Prec 70, CC 25, CD 160, Arm 24, Ddg 16, HP 140, Loot 9, Hunger 7
+//   Lvl 30 (Atk lvl 7): Atk 275, Prec 75, CC 30, CD 180, Arm 24, Ddg 20, HP 140, Loot 11, Hunger 7
+const FIGHT_BASE = {
+  attack: 100, precision: 50, criticalChance: 10, criticalDamages: 100,
+  armor: 0,    dodge: 0,      health: 100,        lootChance: 5,        hunger: 4,
+};
+const FIGHT_GAIN = {
+  attack: 25,  precision: 5,  criticalChance: 5,  criticalDamages: 20,
+  armor: 6,    dodge: 4,      health: 10,         lootChance: 2,        hunger: 1,
+};
+const SKILL_LABELS = {
+  attack: 'Attack', precision: 'Precision', criticalChance: 'Crit chance',
+  criticalDamages: 'Crit damage', armor: 'Armor', dodge: 'Dodge',
+  health: 'Health', lootChance: 'Loot chance', hunger: 'Hunger',
+  energy: 'Energy', entrepreneurship: 'Entrepreneurship', production: 'Production',
+  companies: 'Companies', management: 'Management',
+};
 const FIGHT_KEYS = ['attack','precision','criticalChance','criticalDamages','armor','dodge','health','lootChance','hunger'];
 const ECO_KEYS = ['energy','entrepreneurship','production','companies','management'];
+
+// Project skill levels forward by applying the plan's +1 increments from
+// each level up to viewLevel. Skills not mentioned by the plan stay at
+// their current values.
+function projectSkillsAtLevel(currentLevels, plan, viewLevel) {
+  const projected = { ...currentLevels };
+  if (plan) {
+    plan.forEach(step => {
+      if (step.skill && step.level <= viewLevel) {
+        projected[step.skill] = (projected[step.skill] || 0) + 1;
+      }
+    });
+  }
+  return projected;
+}
+
+// Value (base + skill bonus) for a skill at a given level — independent of
+// gear/buffs. Use this to project the "raw skill value" without modifiers.
+function skillValueAt(name, level) {
+  if (FIGHT_BASE[name] !== undefined) return FIGHT_BASE[name] + (FIGHT_GAIN[name] || 0) * (level || 0);
+  if (ECO_BASE[name]   !== undefined) return ECO_BASE[name]   + (ECO_GAIN[name]   || 0) * (level || 0);
+  return null;
+}
 
 function pointsForLevel(level) { return (level * (level + 1)) / 2; }
 function pointsSpent(levels, keys) {
@@ -2297,9 +2339,6 @@ function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
   }
 
   const sorted = [...preset.skillPlan].sort((a, b) => a.level - b.level);
-  // Filter: at "Lvl X" view, show rows for levels >= X.
-  // Earlier levels (if current player is between 20 and X) are still shown
-  // as done/baseline but de-emphasized.
   const showFromLevel = Math.max(21, effectiveLevel + 1);
   let nextMarked = false;
   const rows = sorted
@@ -2307,7 +2346,6 @@ function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
     .map(plan => {
       let cls = 'plan-row';
       let badge = '';
-      // "Next" is the first row at-or-above effectiveLevel that we haven't marked.
       if (plan.level >= showFromLevel && !nextMarked) {
         cls += ' next';
         badge = '<span class="plan-badge next">next</span>';
@@ -2323,6 +2361,38 @@ function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
       </div>`;
     }).join('');
 
+  // Project skills to viewLevel by adding plan deltas to current levels.
+  const projected = projectSkillsAtLevel(p.levels, preset.skillPlan, effectiveLevel);
+  const projectionRow = (key) => {
+    const lvl = projected[key] || 0;
+    const curLvl = p.levels[key] || 0;
+    const val = skillValueAt(key, lvl);
+    const delta = lvl - curLvl;
+    const deltaStr = delta > 0 ? `<span class="sub"> +${delta}</span>` : '';
+    return `<div class="skill">
+      <span class="skill-name">${SKILL_LABELS[key]}</span>
+      <span class="skill-value">
+        <span class="total">lvl ${lvl}</span>${deltaStr}
+        <span class="sub"> → ${val}</span>
+      </span>
+    </div>`;
+  };
+  const projectionTable = `
+    <div class="section">
+      <div class="section-label">Projected state at Lvl ${effectiveLevel}<span class="right">current → projected</span></div>
+      <div class="skill-cols">
+        <div>
+          <div class="section-label" style="font-size: 0.74rem; margin-bottom: 0.35rem;">Fight</div>
+          <div class="skills">${FIGHT_KEYS.map(projectionRow).join('')}</div>
+        </div>
+        <div>
+          <div class="section-label" style="font-size: 0.74rem; margin-bottom: 0.35rem;">Eco</div>
+          <div class="skills">${ECO_KEYS.map(projectionRow).join('')}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
   const note = currentLevel < 20
     ? `You're at Lvl ${currentLevel}. The plan starts at Lvl 21 (after the Lvl 20 baseline build). Get to Lvl 20 first by working and battling.`
     : currentLevel < effectiveLevel
@@ -2337,6 +2407,7 @@ function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
   return `
     <div class="plan-list">${rows}</div>
     ${note ? `<p class="note">${escapeHtml(note)}</p>` : ''}
+    ${projectionTable}
     ${sustainNote}
   `;
 }

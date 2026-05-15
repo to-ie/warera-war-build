@@ -115,33 +115,249 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem 1.25rem;
+    padding: 0.85rem 1.1rem;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     margin-bottom: 1rem;
   }
   .avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 8px;
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
     background: var(--surface-2);
     flex-shrink: 0;
     object-fit: cover;
   }
-  .player-name { margin: 0 0 0.2rem 0; font-size: 1.2rem; font-weight: 600; }
-  .player-meta { margin: 0; font-size: 0.9rem; color: var(--dim); }
+  .player-name { margin: 0 0 0.15rem 0; font-size: 1.05rem; font-weight: 600; }
+  .player-meta { margin: 0; font-size: 0.85rem; color: var(--dim); }
   .pill {
     display: inline-block;
-    padding: 0.1rem 0.55rem;
+    padding: 0.08rem 0.5rem;
     background: var(--surface-2);
     border-radius: 4px;
-    margin-right: 0.35rem;
-    margin-bottom: 0.2rem;
-    font-size: 0.8rem;
+    margin-right: 0.3rem;
+    margin-bottom: 0.15rem;
+    font-size: 0.78rem;
   }
   .pill .mono { font-family: var(--mono); }
 
+  .section-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dimmer);
+    margin: 1.25rem 0 0.5rem;
+    padding-left: 0.1rem;
+  }
+  .section-title:first-of-type { margin-top: 0.25rem; }
+
+  /* ─── Compact collapsible card (current state) ───────────────── */
+  .compact-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.4rem;
+  }
+  .compact-card[open] { border-color: var(--border-strong); }
+  .compact-card > summary {
+    padding: 0.7rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    list-style: none;
+    user-select: none;
+  }
+  .compact-card > summary::-webkit-details-marker { display: none; }
+  .compact-card .caret {
+    color: var(--dim);
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .compact-card:not([open]) .caret { transform: rotate(-90deg); }
+  .cc-title { font-weight: 600; font-size: 0.92rem; flex-shrink: 0; }
+  .cc-summary {
+    color: var(--dim);
+    font-size: 0.88rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cc-summary .mono { font-family: var(--mono); }
+  .cc-summary .pos { color: var(--accent); }
+  .cc-summary .neg { color: var(--error); }
+  .cc-aux {
+    color: var(--dimmer);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+  .cc-body {
+    padding: 0.9rem 1.1rem 1.1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── Target build tabs (preset picker) ──────────────────────── */
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+  @media (max-width: 520px) { .tabs { grid-template-columns: 1fr; } }
+  .tab {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: all 0.15s;
+  }
+  .tab:hover { border-color: var(--border-strong); }
+  .tab.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .tab-name { font-weight: 600; font-size: 0.95rem; }
+  .tab.active .tab-name { color: var(--accent); }
+  .tab-sub { font-size: 0.78rem; color: var(--dim); line-height: 1.35; }
+  .tab-badge {
+    display: inline-block;
+    font-size: 0.66rem;
+    font-weight: 600;
+    padding: 0.08rem 0.45rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    align-self: flex-start;
+    margin-top: 0.15rem;
+  }
+  .tab-badge.self-funding { background: var(--accent-soft); color: var(--accent); }
+  .tab-badge.burns { background: var(--warn-soft); color: var(--warn); }
+
+  /* ─── Level + duration control row ───────────────────────────── */
+  .plan-control {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0.65rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    font-size: 0.86rem;
+  }
+  .plan-control label {
+    color: var(--dim);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .plan-control select,
+  .plan-control input[type=number] {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    font: inherit;
+    font-family: var(--mono);
+  }
+  .plan-control input[type=number] { width: 60px; text-align: right; }
+  .plan-control input[type=number]::-webkit-inner-spin-button,
+  .plan-control input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .plan-control select:focus,
+  .plan-control input:focus { outline: none; border-color: var(--accent); }
+  .plan-note {
+    color: var(--warn);
+    font-size: 0.78rem;
+    font-style: italic;
+    flex-basis: 100%;
+    margin: 0.1rem 0 0;
+  }
+
+  /* ─── Grand total banner at top of target build ──────────────── */
+  .grand-banner {
+    margin-bottom: 0.85rem;
+    padding: 0.85rem 1.1rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .grand-banner .mono { font-family: var(--mono); font-size: 1.05rem; }
+  .grand-banner .label { font-size: 0.95rem; }
+  .grand-banner .sub { font-size: 0.75rem; font-weight: 400; color: var(--dim); font-style: italic; margin-top: 0.15rem; display: block; }
+
+  /* ─── Target build boxes (the 5 actionable sections) ─────────── */
+  .target-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.45rem;
+  }
+  .target-box.open { border-color: var(--border-strong); }
+  .target-box-head {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    user-select: none;
+  }
+  .target-box-head .caret {
+    color: var(--dim);
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .target-box:not(.open) .target-box-head .caret { transform: rotate(-90deg); }
+  .target-box-num {
+    font-family: var(--mono);
+    color: var(--dimmer);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  .target-box-title {
+    font-weight: 600;
+    font-size: 0.92rem;
+    flex-shrink: 0;
+  }
+  .target-box-summary {
+    color: var(--dim);
+    font-size: 0.85rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .target-box-summary .mono { font-family: var(--mono); }
+  .target-box-summary .pos { color: var(--accent); }
+  .target-box-summary .neg { color: var(--error); }
+  .target-box-summary .warn { color: var(--warn); }
+  .target-box-body { display: none; padding: 0 1.1rem 1.1rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  .target-box.open .target-box-body { display: block; }
+
+  /* ─── Existing styles preserved ──────────────────────────────── */
   .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -149,35 +365,11 @@
   }
   @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1.1rem 1.25rem;
-  }
-  .card h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .badge {
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-size: 0.72rem;
-    font-weight: 500;
-    padding: 0.18rem 0.55rem;
-    border-radius: 999px;
-    font-family: var(--mono);
-  }
-
   .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
     gap: 0.5rem;
-    margin-bottom: 1.1rem;
+    margin-bottom: 0.8rem;
   }
   .stat {
     background: var(--surface-2);
@@ -203,7 +395,6 @@
     font-weight: 500;
     font-size: 0.95rem;
   }
-
   .delta {
     font-size: 0.68rem;
     font-weight: 400;
@@ -212,133 +403,13 @@
     white-space: nowrap;
     color: var(--dimmer);
   }
-  .delta.positive,
-  .delta.negative,
-  .delta.neutral { color: var(--dimmer); }
 
-  .state-section { margin: 0; margin-top: 1.5rem; }
-  .state-section:first-of-type { margin-top: 0; }
-  .state-section > summary {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    cursor: pointer;
-    padding: 0.5rem 0 0.85rem;
-    list-style: none;
-    user-select: none;
-  }
-  .state-section > summary::-webkit-details-marker { display: none; }
-  .state-section > summary > .caret {
-    color: var(--dim);
-    transition: transform 0.2s;
-    font-size: 0.85rem;
-    flex-shrink: 0;
-    display: inline-block;
-  }
-  .state-section > summary > h2 {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .state-section:not([open]) > summary > .caret { transform: rotate(-90deg); }
-
-  .picker {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.5rem;
-  }
-  .picker button {
-    flex: 1;
-    min-width: 130px;
-    padding: 0.6rem 0.9rem;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    border-radius: 6px;
-    cursor: pointer;
-    font: inherit;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: all 0.15s;
-  }
-  .picker button:hover { border-color: var(--accent); }
-  .picker button.active {
-    background: var(--accent-soft);
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-  .preset-tagline {
-    color: var(--dim);
-    font-size: 0.88rem;
-    margin: 0 0 0.6rem 0;
-    font-style: italic;
-  }
-  .preset-outcome {
-    color: var(--text);
-    font-size: 0.85rem;
-    margin: 0 0 1rem 0;
-    padding: 0.5rem 0.8rem;
-    background: var(--surface-2);
-    border-radius: 6px;
-    border-left: 2px solid var(--accent);
-  }
-  .preset-outcome strong {
-    color: var(--accent);
-    font-weight: 600;
-    margin-right: 0.4rem;
-  }
-
-  .war-params {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-    padding: 0.6rem 0.85rem;
-    background: var(--surface-2);
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    margin-bottom: 1rem;
-    font-size: 0.85rem;
-  }
-  .war-params label {
-    color: var(--dim);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .war-params label.disabled { opacity: 0.4; }
-  .war-params input {
-    width: 56px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.25rem 0.45rem;
-    border-radius: 4px;
-    font: inherit;
-    font-family: var(--mono);
-    text-align: right;
-  }
-  .war-params input:focus { outline: none; border-color: var(--accent); }
-  .war-params input[type=number] { -moz-appearance: textfield; appearance: textfield; }
-  .war-params input[type=number]::-webkit-inner-spin-button,
-  .war-params input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  .war-params .auto-tag {
-    color: var(--dimmer);
-    font-size: 0.72rem;
-    margin-left: 0.15rem;
-    font-style: italic;
-  }
-
-  .section { margin-top: 1rem; }
+  .section { margin-top: 0.85rem; }
   .section:first-child { margin-top: 0; }
   .section-label {
     color: var(--dim);
-    font-size: 0.82rem;
-    margin-bottom: 0.55rem;
+    font-size: 0.78rem;
+    margin-bottom: 0.5rem;
     font-weight: 500;
     display: flex;
     align-items: baseline;
@@ -351,20 +422,14 @@
     font-family: var(--mono);
     font-weight: 400;
   }
-  .section-label .right .muted-suffix {
-    color: var(--dimmer);
-    font-size: 0.75rem;
-    font-weight: 400;
-    margin-left: 0.4rem;
-  }
 
-  .skills { display: grid; gap: 0.3rem; font-size: 0.85rem; }
+  .skills { display: grid; gap: 0.25rem; font-size: 0.82rem; }
   .skill {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.4rem 0.6rem;
+    padding: 0.35rem 0.55rem;
     background: var(--surface-2);
     border-radius: 4px;
   }
@@ -373,11 +438,18 @@
   .skill-value .sub { color: var(--dimmer); font-weight: 400; }
   .skill-value .total { color: var(--text); font-weight: 600; }
 
-  .action-list { display: grid; gap: 0.4rem; }
+  .skill-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  @media (max-width: 600px) { .skill-cols { grid-template-columns: 1fr; } }
+
+  .action-list { display: grid; gap: 0.35rem; }
   .action-row {
     background: var(--surface-2);
     border-radius: 6px;
-    padding: 0.55rem 0.75rem;
+    padding: 0.5rem 0.7rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -388,18 +460,18 @@
   .action-main {
     display: flex;
     flex-direction: column;
-    gap: 0.18rem;
+    gap: 0.15rem;
     min-width: 0;
     flex: 1;
   }
   .action-what {
-    font-size: 0.88rem;
+    font-size: 0.86rem;
     color: var(--text);
     font-weight: 500;
   }
   .action-detail {
     color: var(--dim);
-    font-size: 0.76rem;
+    font-size: 0.75rem;
   }
   .action-cost {
     font-family: var(--mono);
@@ -413,16 +485,16 @@
   .action-cost.unknown { color: var(--dimmer); font-style: italic; font-size: 0.78rem; font-weight: 400; }
   .action-cost.none { color: var(--dimmer); font-size: 0.78rem; font-weight: 400; }
 
-  table.list { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   table.list th, table.list td {
     text-align: left;
-    padding: 0.4rem 0.5rem;
+    padding: 0.35rem 0.45rem;
     border-bottom: 1px solid var(--border);
   }
   table.list th {
     color: var(--dimmer);
     font-weight: 500;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
   }
   table.list td.mono { font-family: var(--mono); }
   table.list td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
@@ -431,15 +503,6 @@
   table.list td.pos { color: var(--accent); font-family: var(--mono); text-align: right; white-space: nowrap; }
   table.list td.neg { color: var(--error); font-family: var(--mono); text-align: right; white-space: nowrap; }
 
-  /* Rarity-colored text (kept for legacy uses; we now prefer .r-tag). */
-  .r-common    { color: var(--rarity-common);    font-weight: 500; }
-  .r-uncommon  { color: var(--rarity-uncommon);  font-weight: 500; }
-  .r-rare      { color: var(--rarity-rare);      font-weight: 500; }
-  .r-epic      { color: var(--rarity-epic);      font-weight: 500; }
-  .r-legendary { color: var(--rarity-legendary); font-weight: 500; }
-  .r-mythic    { color: var(--rarity-mythic);    font-weight: 500; }
-
-  /* Compact rarity tag — small pill that sits after the item name. */
   .r-tag {
     display: inline-block;
     font-size: 0.56rem;
@@ -460,7 +523,7 @@
   .r-tag.mythic    { background: rgba(240,96,96,0.20); color: var(--rarity-mythic); }
 
   .placeholder-text {
-    font-size: 0.85rem;
+    font-size: 0.83rem;
     color: var(--dim);
     margin: 0.25rem 0 0;
     padding: 0.5rem 0.7rem;
@@ -470,8 +533,9 @@
   }
   .placeholder-text.ok { color: var(--accent); border-color: var(--accent); }
   .placeholder-text.warn { color: var(--warn); border-color: var(--warn); }
+  .placeholder-text.err { color: var(--error); border-color: var(--error); }
 
-  .plan-list { display: grid; gap: 0.25rem; }
+  .plan-list { display: grid; gap: 0.22rem; }
   .plan-row {
     background: var(--surface-2);
     border-radius: 4px;
@@ -479,14 +543,14 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
   }
   .plan-row.done { opacity: 0.45; }
   .plan-row.next { border-left: 3px solid var(--accent); background: var(--accent-soft); }
   .plan-level {
     color: var(--dim);
     font-family: var(--mono);
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     min-width: 3.5em;
     flex-shrink: 0;
   }
@@ -503,30 +567,15 @@
   .plan-badge.done { background: rgba(139,148,163,0.18); color: var(--dimmer); }
   .plan-badge.next { background: var(--accent-soft); color: var(--accent); }
 
-  .grand-total {
-    margin-top: 0.9rem;
-    padding: 0.7rem 0.85rem;
-    background: var(--accent-soft);
-    border-radius: 6px;
-    border: 1px solid var(--accent);
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--accent);
-  }
-  .grand-total .mono { font-family: var(--mono); }
-
-  .war-flow { display: grid; gap: 0.5rem; }
+  .war-flow { display: grid; gap: 0.45rem; }
   .flow-block {
     background: var(--surface-2);
     border-radius: 6px;
     padding: 0.55rem 0.75rem;
   }
   .flow-block h5 {
-    margin: 0 0 0.4rem;
-    font-size: 0.78rem;
+    margin: 0 0 0.35rem;
+    font-size: 0.76rem;
     color: var(--dim);
     font-weight: 500;
   }
@@ -534,53 +583,81 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-size: 0.84rem;
-    padding: 0.18rem 0;
+    font-size: 0.82rem;
+    padding: 0.16rem 0;
     gap: 0.5rem;
   }
   .flow-line .ll { color: var(--dim); flex: 1; }
-  .flow-line .ll .qty { color: var(--dimmer); font-family: var(--mono); font-size: 0.76rem; margin-left: 0.3rem; }
+  .flow-line .ll .qty { color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem; }
   .flow-line .lv { font-family: var(--mono); white-space: nowrap; }
   .flow-line .lv.pos { color: var(--accent); }
   .flow-line .lv.neg { color: var(--error); }
   .flow-line .lv.unk { color: var(--dimmer); font-style: italic; font-size: 0.78rem; }
   .flow-subtotal {
     border-top: 1px solid var(--border);
-    margin-top: 0.35rem;
-    padding-top: 0.4rem;
+    margin-top: 0.3rem;
+    padding-top: 0.35rem;
     font-weight: 600;
   }
-  .flow-note {
-    background: var(--surface-2);
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.82rem;
-    color: var(--dim);
-    font-style: italic;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
   .flow-net {
-    margin-top: 0.5rem;
-    padding: 0.65rem 0.85rem;
+    margin-top: 0.45rem;
+    padding: 0.6rem 0.85rem;
     border-radius: 6px;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 600;
   }
   .flow-net.positive { background: var(--accent-soft); color: var(--accent); }
   .flow-net.negative { background: var(--error-soft); color: var(--error); }
   .flow-net .mono { font-family: var(--mono); }
 
+  /* Bottom-line balance sheet */
+  .bs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+  }
+  @media (max-width: 600px) { .bs-grid { grid-template-columns: 1fr; } }
+  .bs-block {
+    background: var(--surface-2);
+    border-radius: 6px;
+    padding: 0.7rem 0.85rem;
+  }
+  .bs-block h5 {
+    margin: 0 0 0.5rem;
+    font-size: 0.76rem;
+    color: var(--dim);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .bs-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.85rem;
+    padding: 0.2rem 0;
+    gap: 0.5rem;
+  }
+  .bs-line .ll { color: var(--dim); }
+  .bs-line .lv { font-family: var(--mono); white-space: nowrap; font-weight: 500; }
+  .bs-line .lv.pos { color: var(--accent); }
+  .bs-line .lv.neg { color: var(--error); }
+  .bs-line.total {
+    border-top: 1px solid var(--border);
+    margin-top: 0.3rem;
+    padding-top: 0.4rem;
+    font-weight: 600;
+  }
+  .bs-line.total .ll { color: var(--text); font-weight: 600; }
+
   .note {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--dimmer);
     font-style: italic;
-    margin-top: 0.9rem;
+    margin-top: 0.75rem;
   }
   .hidden { display: none !important; }
   .muted { color: var(--dim); }
@@ -671,19 +748,17 @@
     body { font-size: 14px; }
     main { padding: 1rem; }
     .topbar-inner { padding: 0.75rem 1rem; }
-    .card { padding: 0.9rem 1rem; }
     .stats { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 0.4rem; }
     .stat { padding: 0.45rem 0.55rem; }
     .stat-label { font-size: 0.7rem; }
     .stat-value { font-size: 0.9rem; }
-    .skills { font-size: 0.8rem; }
-    .skill { padding: 0.4rem 0.5rem; }
-    table.list { font-size: 0.78rem; }
-    table.list th, table.list td { padding: 0.35rem 0.4rem; }
-    .player-head { padding: 0.85rem 1rem; }
-    .player-name { font-size: 1.1rem; }
+    .skills { font-size: 0.78rem; }
+    table.list { font-size: 0.76rem; }
+    table.list th, table.list td { padding: 0.3rem 0.35rem; }
+    .player-head { padding: 0.7rem 0.9rem; }
+    .player-name { font-size: 1rem; }
     .info-btn .tip { width: 240px; left: auto; right: 0; }
-    .picker button { min-width: 0; flex: 1 1 calc(50% - 0.25rem); font-size: 0.85rem; }
+    .cc-summary, .target-box-summary { white-space: normal; }
   }
 </style>
 </head>
@@ -694,7 +769,7 @@
     <div class="brand">
       <h1>War <span class="accent">Readiness</span></h1>
     </div>
-    <span class="brand sub">build planner for warera.io · v0.8</span>
+    <span class="brand sub">build planner for warera.io · v0.9</span>
   </div>
 </div>
 
@@ -714,43 +789,11 @@
       </div>
     </div>
 
-    <details class="state-section" open>
-      <summary>
-        <span class="caret">▾</span>
-        <h2>Your current state</h2>
-      </summary>
-      <div class="grid">
-        <div class="card">
-          <h3>
-            <span>Combat <span id="combat-info"></span></span>
-            <span class="badge" id="combat-badge"></span>
-          </h3>
-          <div id="combat-content"></div>
-        </div>
-        <div class="card">
-          <h3>
-            <span>Economy <span id="economy-info"></span></span>
-            <span class="badge" id="economy-badge"></span>
-          </h3>
-          <div id="economy-content"></div>
-        </div>
-      </div>
-      <div class="card" style="margin-top: 1rem;">
-        <h3>
-          <span>Wealth <span id="wealth-info"></span></span>
-          <span class="badge" id="wealth-badge"></span>
-        </h3>
-        <div id="wealth-content"></div>
-      </div>
-    </details>
+    <div class="section-title">Current state</div>
+    <div id="state-content"></div>
 
-    <details class="state-section" id="target-section" open>
-      <summary>
-        <span class="caret">▾</span>
-        <h2>Target build <span id="target-info"></span></h2>
-      </summary>
-      <div id="target-content"></div>
-    </details>
+    <div class="section-title">Target build</div>
+    <div id="target-content"></div>
 
     <details class="debug hidden" id="debug-panel">
       <summary>Raw API responses (debug mode)</summary>
@@ -840,12 +883,6 @@ function infoBtn(content, label = 'More info') {
   return `<button class="info-btn" type="button" tabindex="0" aria-label="${escapeAttr(label)}">?<span class="tip">${tipRows(content)}</span></button>`;
 }
 
-/* Color a whole label by rarity (legacy). */
-function rarityColored(rarity, label) {
-  if (!rarity) return escapeHtml(label || '');
-  return `<span class="r-${rarity}">${escapeHtml(label)}</span>`;
-}
-/* Small rarity pill placed after an item name. Preferred over rarityColored. */
 function rarityTag(rarity) {
   if (!rarity) return '';
   return `<span class="r-tag ${rarity}">${RARITY_LABEL[rarity]}</span>`;
@@ -887,7 +924,6 @@ async function trpc(endpoint, params = {}) {
  *  GAME CONSTANTS
  * ═══════════════════════════════════════════════════════════════════ */
 const ECO_BASE = { energy: 30, entrepreneurship: 30, production: 10, companies: 2, management: 4 };
-const ECO_GAIN = { energy: 10, entrepreneurship: 5, production: 3, companies: 1, management: 2 };
 const FIGHT_KEYS = ['attack','precision','criticalChance','criticalDamages','armor','dodge','health','lootChance','hunger'];
 const ECO_KEYS = ['energy','entrepreneurship','production','companies','management'];
 
@@ -895,7 +931,6 @@ function pointsForLevel(level) { return (level * (level + 1)) / 2; }
 function pointsSpent(levels, keys) {
   return keys.reduce((s, k) => s + pointsForLevel(levels[k] || 0), 0);
 }
-
 function companiesSkillLevelForMax(maxTarget) {
   return Math.max(0, maxTarget - ECO_BASE.companies);
 }
@@ -919,7 +954,6 @@ function itemCode(slot, rarity) {
   if (slot === 'weapon') return WEAPON_BY_RARITY[rarity];
   return `${slot}${RARITY_BY_INDEX.indexOf(rarity)}`;
 }
-
 function rarityFromCode(code) {
   if (!code) return null;
   const m = String(code).match(/(\d)$/);
@@ -927,11 +961,7 @@ function rarityFromCode(code) {
   const byWeapon = Object.entries(WEAPON_BY_RARITY).find(([, c]) => c === code);
   return byWeapon ? byWeapon[0] : null;
 }
-
 function rarityIndex(rarity) { return RARITY_BY_INDEX.indexOf(rarity); }
-
-/* Now returns just the slot name (or weapon name) — no rarity prefix.
-   Rarity is shown separately via rarityTag(). */
 function gearItemName(slot, rarity) {
   if (slot === 'weapon') return WEAPON_DISPLAY[WEAPON_BY_RARITY[rarity]] || SLOT_LABEL.weapon;
   return SLOT_LABEL[slot] || slot;
@@ -955,15 +985,9 @@ const CONSUMABLES = {
 const AE_TABLE = { 0: 0, 1: 24, 2: 48, 3: 72, 4: 96, 5: 120, 6: 144, 7: 168, 8: 192, 9: 216, 10: 240 };
 
 const RECIPES = {
-  steel:      { iron: 1 },
-  concrete:   { limestone: 1 },
-  lightAmmo:  { steel: 1 },
-  ammo:       { steel: 1, lead: 1 },
-  heavyAmmo:  { steel: 2, lead: 1 },
-  bread:      { grain: 1 },
-  steak:      { livestock: 1 },
-  cookedFish: { fish: 1 },
-  cocain:     { coca: 1 },
+  steel: { iron: 1 }, concrete: { limestone: 1 },
+  lightAmmo: { steel: 1 }, ammo: { steel: 1, lead: 1 }, heavyAmmo: { steel: 2, lead: 1 },
+  bread: { grain: 1 }, steak: { livestock: 1 }, cookedFish: { fish: 1 }, cocain: { coca: 1 },
 };
 
 const FACTORY_ASSUMPTIONS = {
@@ -972,11 +996,17 @@ const FACTORY_ASSUMPTIONS = {
   outputCalibration: 1.0,
 };
 
+/* Estimated extra income during war from completing daily missions and
+   selling case/scrap drops. Pulled from guide ("+101.5g/day from missions
+   + cases/scrap"). Exposed as a constant so we can tune or show provenance. */
+const WAR_LOOT_INCOME_PER_DAY = 101.5;
+
 const PRESETS = {
   basic: {
     name: 'War Basic',
-    tagline: 'Sustainable — Rare gear, no pill. Sells loot + scrap to self-fund. Default for any war (including pill-debuff windows).',
-    outcome: '~180k damage/day with Rare weapon. ~220k/day if you have an Epic weapon. Bitcoin-positive day-to-day. Assumes 50% battle bonus.',
+    sub: 'Sustainable · Rare gear, no pill',
+    tagline: 'Sells loot + scrap to self-fund. Default for any war (including pill-debuff windows).',
+    outcome: '~180k dmg/day (Rare weapon) or ~220k/day (Epic). Bitcoin-positive day-to-day. Assumes 50% battle bonus.',
     gear: { weapon: 'rare', helmet: 'rare', chest: 'rare', pants: 'rare', boots: 'rare', gloves: 'rare' },
     buffs: { pill: false, ammo: 'light', food: 'steak' },
     foundations: {
@@ -1004,8 +1034,9 @@ const PRESETS = {
   },
   highDamage: {
     name: 'War High-Damage',
-    tagline: 'Stockpile for a 2-day pill push. Tank + Sniper weapons, Legendary boots, Epic gear. Pop pill on full HP + hunger for max impact.',
-    outcome: '~1M damage per pill day (assumes 50% battle bonus). Stockpile cost ~2.5K ₿ — about 2 weeks to save. Keep 2 sets of Rare gear in reserve as fallback.',
+    sub: 'Pill push · Tank/Sniper + Legendary boots + Epic',
+    tagline: 'Stockpile for a 2-day pill push. Pop pill on full HP + hunger for max impact.',
+    outcome: '~1M dmg/pill day (assumes 50% battle bonus). Stockpile cost ~2.5K ₿ — about 2 weeks to save. Keep 2 sets of Rare gear in reserve.',
     gear: { weapon: 'legendary', helmet: 'epic', chest: 'epic', pants: 'epic', boots: 'legendary', gloves: 'epic' },
     buffs: { pill: true, ammo: 'ammo', food: 'fish' },
     foundations: {
@@ -1032,29 +1063,41 @@ const PRESETS = {
   },
 };
 
+/* ═══════════════════════════════════════════════════════════════════
+ *  STATE — viewLevel, selectedPreset, warParams, expansion states
+ * ═══════════════════════════════════════════════════════════════════ */
 const DEFAULT_WAR_PARAMS = { warDays: 7, hitsPerDay: null, pillsPerDay: 1 };
 let warParams = { ...DEFAULT_WAR_PARAMS };
 let selectedPreset = 'basic';
+let viewLevel = null; // null = "my current level"; otherwise a numeric override
 let cached = { player: null, data: null };
+
+/* Target build box expansion — preserved across re-renders. */
+let targetExpanded = {
+  skills: true,
+  companies: false,
+  gear: false,
+  modelDay: false,
+  bottomLine: false,
+};
 
 const COMBAT_STAT_DESCRIPTIONS = [
   { term: 'Attack', desc: 'The base value for Damages calculation.' },
-  { term: 'Precision', desc: 'Chance to hit the target. Misses cannot crit, and deal half damage.' },
+  { term: 'Precision', desc: 'Chance to hit. Misses cannot crit and deal half damage.' },
   { term: 'Crit chance', desc: 'Probability of landing a critical hit.' },
-  { term: 'Crit damages', desc: 'The damage factor increase of critical hits over normal hits.' },
-  { term: 'Armor', desc: 'Reduces health lost when fighting in battles.' },
-  { term: 'Dodge', desc: 'Chance to dodge all incoming damage when fighting in battles. Dodging also prevents equipment durability from being consumed.' },
+  { term: 'Crit damages', desc: 'Damage factor increase of critical hits over normal hits.' },
+  { term: 'Armor', desc: 'Reduces health lost when fighting.' },
+  { term: 'Dodge', desc: 'Chance to dodge all incoming damage. Dodging also prevents equipment durability loss.' },
   { term: 'Health', desc: 'Consumed when fighting in battles.' },
-  { term: 'Loot chance', desc: 'Chance per hit to instantly loot. Each 1% gives 1% to PP loot and 0.01% to case loot per hit.' },
-  { term: 'Hunger', desc: 'Limit of food consumption.' },
+  { term: 'Loot chance', desc: 'Chance per hit to instantly loot. 1% gives 1% PP loot and 0.01% case loot per hit.' },
+  { term: 'Hunger', desc: 'Limit of food consumption per battle.' },
 ];
-
 const ECONOMY_STAT_DESCRIPTIONS = [
-  { term: 'Energy', desc: 'Used to Work (or fight in battles). Fills your daily action pool.' },
-  { term: 'Entrepreneurship', desc: 'Used to Self Work in your own companies. Separate pool, runs in parallel with Energy.' },
-  { term: 'Production', desc: 'The Production Points you generate each time you work.' },
-  { term: 'Companies', desc: 'Amount of companies you can own.' },
-  { term: 'Management', desc: 'Amount of Workers you can manage. And daily hire limit.' },
+  { term: 'Energy', desc: 'Used to Work or fight. Fills your daily action pool.' },
+  { term: 'Entrepreneurship', desc: 'Used to Self Work in your own companies. Separate pool, parallel to Energy.' },
+  { term: 'Production', desc: 'Production Points generated per work action.' },
+  { term: 'Companies', desc: 'Max companies you can own.' },
+  { term: 'Management', desc: 'Max workers you can manage + daily hire limit.' },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1071,9 +1114,6 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  /* Gateway only exposes inventory.fetchCurrentEquipment. Full inventory
-     contents (consumables, materials, spare gear) aren't reachable via
-     the gateway — if/when an endpoint is added upstream, plumb it here. */
   const [user, inventory, companyList, pricesR, workersR] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
@@ -1222,20 +1262,15 @@ function extractEquipment(inv) {
     const code = p.code ?? '?';
     const rarity = rarityFromCode(code);
     return {
-      code,
-      rarity,
+      code, rarity,
       displayName: gearItemName(key, rarity),
       durability: p.state != null ? Math.round((p.state / (p.maxState || 100)) * 100) : null,
       skills: p.skills || {},
     };
   };
   return {
-    weapon: slot('weapon'),
-    helmet: slot('helmet'),
-    chest:  slot('chest'),
-    pants:  slot('pants'),
-    boots:  slot('boots'),
-    gloves: slot('gloves'),
+    weapon: slot('weapon'), helmet: slot('helmet'), chest: slot('chest'),
+    pants: slot('pants'), boots: slot('boots'), gloves: slot('gloves'),
   };
 }
 
@@ -1251,7 +1286,6 @@ function extractCompanies(data) {
     const workerCount = co.workerCount ?? 0;
     const aeLevel = co.activeUpgradeLevels?.automatedEngine ?? 0;
     const price = prices[itemCodeStr] != null ? Number(prices[itemCodeStr]) : null;
-
     const aePP = AE_TABLE[aeLevel] ?? (aeLevel * 24);
 
     const workers = workersByCompany[id] || [];
@@ -1299,30 +1333,49 @@ function extractCompanies(data) {
     return {
       id, name: co.name ?? '?',
       itemCode: itemCodeStr,
-      aeLevel,
-      aePP,
+      aeLevel, aePP,
       storageLevel: co.activeUpgradeLevels?.storage ?? null,
       breakRoomLevel: co.activeUpgradeLevels?.breakRoom ?? null,
       stored: co.production ?? null,
       estimatedValue: co.estimatedValue ?? null,
-      workerCount,
-      workers: workerDetails,
-      workerPP,
-      isProcessed,
-      recipeBreakdown,
-      dailyIngredientCost,
-      marketPrice: price,
-      dailyOutput,
-      dailyRevenue,
-      dailyWageCost,
-      dailyNet,
+      workerCount, workers: workerDetails, workerPP,
+      isProcessed, recipeBreakdown, dailyIngredientCost,
+      marketPrice: price, dailyOutput, dailyRevenue, dailyWageCost, dailyNet,
     };
   });
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- *  COMPUTE — FOUNDATIONS / GEAR / CONSUMABLES / DAILY
+ *  COMPUTE
  * ═══════════════════════════════════════════════════════════════════ */
+function buildLabel(player) {
+  const fightSpent = pointsSpent(player.levels, FIGHT_KEYS);
+  const ecoSpent = pointsSpent(player.levels, ECO_KEYS);
+  const total = fightSpent + ecoSpent;
+  if (total === 0) return { label: 'Unallocated', sub: 'No skill points spent' };
+  const fightShare = fightSpent / total;
+  const fp = Math.round(fightShare * 100);
+  const ep = 100 - fp;
+  // Thresholds: 9 fight skills vs 5 eco — an even spread by count would be
+  // 64% fight, so we anchor "Fight build" well above that and "Eco build"
+  // well below 50% (eco-heavy enough that they're actively skipping fight
+  // skills despite the larger fight tree).
+  if (fightShare > 0.75) return { label: 'Fight build', sub: `${fp}% fight / ${ep}% eco` };
+  if (fightShare < 0.50) return { label: 'Eco build',   sub: `${fp}% fight / ${ep}% eco` };
+  return                       { label: 'Hybrid build', sub: `${fp}% fight / ${ep}% eco` };
+}
+
+function actionsPerDay(bar, usagePct = 1) {
+  return Math.floor(bar / 10) * 2.4 * usagePct;
+}
+
+function effectiveHitsPerDay(player, params) {
+  if (params.hitsPerDay != null && !isNaN(params.hitsPerDay) && params.hitsPerDay >= 0) {
+    return params.hitsPerDay;
+  }
+  return Math.round(actionsPerDay(player.eco.energy));
+}
+
 function computeFoundations(player, comps, preset) {
   const items = [];
   const f = preset.foundations || {};
@@ -1335,44 +1388,35 @@ function computeFoundations(player, comps, preset) {
     const currentSkill = player.levels.companies || 0;
     items.push({
       what: `Unlock ${needSlots} more company slot${needSlots > 1 ? 's' : ''}`,
-      detail: `Level the Companies skill from ${currentSkill} to ${targetSkill} (in your skill tree). Requires leveling up to earn SP.`,
-      cost: 'none',
-      tone: 'warn',
+      detail: `Level the Companies skill from ${currentSkill} to ${targetSkill}. Requires leveling up to earn SP.`,
+      cost: 'none', tone: 'warn',
     });
   }
-
   const targetBuilt = Math.min(minCo, player.eco.companies);
   if (comps.length < targetBuilt) {
     const need = targetBuilt - comps.length;
     const available = player.eco.companies - comps.length;
     items.push({
       what: `Build ${need} more compan${need > 1 ? 'ies' : 'y'}`,
-      detail: `You have ${comps.length} built and ${available} unused slot${available > 1 ? 's' : ''}. Pick profitable items (raw materials for steady income, processed for higher margin).`,
-      cost: 'none',
-      tone: 'warn',
+      detail: `You have ${comps.length} built and ${available} unused slot${available > 1 ? 's' : ''}.`,
+      cost: 'none', tone: 'warn',
     });
   }
-
   const lowAe = comps.filter(c => c.aeLevel < minAe);
   if (lowAe.length > 0) {
     const names = lowAe.map(c => `${c.name} (AE ${c.aeLevel})`).join(', ');
     items.push({
       what: `Upgrade ${lowAe.length} compan${lowAe.length > 1 ? 'ies' : 'y'} to AE ${minAe}`,
       detail: `Below target: ${names}.`,
-      cost: 'none',
-      tone: 'warn',
+      cost: 'none', tone: 'warn',
     });
   }
-
-  return { items, note: f.note || '' };
+  return { items, note: f.note || '', minCompanies: minCo, minAe };
 }
 
 function computeGearNeeds(eq, preset, prices, params) {
   const days = params.warDays;
 
-  /* Stockpile model — explicit list of items with rarity + per-day count.
-     Used by High-Damage where the weapon slot mixes Tank (Legendary) and
-     Sniper (Epic), and quantities scale with pill push days, not war days. */
   if (preset.gearModel === 'stockpile') {
     const items = preset.gearStockpile.map(g => {
       const code = itemCode(g.slot, g.rarity);
@@ -1381,12 +1425,8 @@ function computeGearNeeds(eq, preset, prices, params) {
       const unit = price != null ? Number(price) : null;
       const line = unit != null ? unit * qty : null;
       return {
-        slot: g.slot,
-        targetCode: code,
-        targetRarity: g.rarity,
-        qty,
-        unit,
-        line,
+        slot: g.slot, targetCode: code, targetRarity: g.rarity,
+        qty, unit, line,
         detail: `${g.perDay}/day × ${days} day${days > 1 ? 's' : ''}`,
       };
     });
@@ -1431,7 +1471,6 @@ function computeGearNeeds(eq, preset, prices, params) {
       items.push({ slot, targetCode, targetRarity, qty, unit, line, detail });
     }
   }
-
   return { items, total, anyMissing };
 }
 
@@ -1453,20 +1492,17 @@ function computeConsumables(preset, prices, player, params) {
 
   if (preset.consumablesModel === 'pill-push') {
     const per = preset.consumablesPerDay;
-    push(CONSUMABLES[preset.buffs.ammo], per.ammo * days, `${per.ammo}/day × ${days} day${days > 1 ? 's' : ''} — heavy pill-push consumption`);
-    push(CONSUMABLES[preset.buffs.food], Math.ceil(per.food * days), `${per.food}/day × ${days} day${days > 1 ? 's' : ''} — eaten at full hunger before pill`);
-    // Pills: fixed total per push (~1 per pill day), not per-day multiplied.
+    push(CONSUMABLES[preset.buffs.ammo], per.ammo * days, `${per.ammo}/day × ${days} day${days > 1 ? 's' : ''}`);
+    push(CONSUMABLES[preset.buffs.food], Math.ceil(per.food * days), `${per.food}/day × ${days} day${days > 1 ? 's' : ''}`);
     if (preset.pillsTotal != null) {
       push(CONSUMABLES.pill, preset.pillsTotal, `${preset.pillsTotal} total per push (≈ 1 per pill day)`);
-    } else if (per.pill) {
-      push(CONSUMABLES.pill, per.pill * days, `${per.pill}/day × ${days} days`);
     }
   } else {
     const hitsPerDay = effectiveHitsPerDay(player, params);
     const totalHits = hitsPerDay * days;
     const hunger = player?.derived?.hunger || 4;
     push(CONSUMABLES[preset.buffs.ammo], totalHits, `1 per hit × ${fmt(hitsPerDay, 1)} hits/day × ${days} days`);
-    push(CONSUMABLES[preset.buffs.food], Math.ceil(totalHits / hunger), `1 per ${hunger} hits (Hunger skill) × ${totalHits} hits`);
+    push(CONSUMABLES[preset.buffs.food], Math.ceil(totalHits / hunger), `1 per ${hunger} hits × ${totalHits} hits`);
     if (preset.buffs.pill) push(CONSUMABLES.pill, days * params.pillsPerDay, `${params.pillsPerDay}/day × ${days} days`);
   }
 
@@ -1498,17 +1534,14 @@ function computeTargetStats(preset, militaryRankPercent = 0) {
     prc: 50 + glovesPrc,
     cc:  10 + weaponCrit,
     cd:  100 + helmetCD,
-    armRaw,
-    arm: armRaw / (armRaw + 40) * 100,
-    ddgRaw,
-    ddg: ddgRaw / (ddgRaw + 40) * 100,
+    armRaw, arm: armRaw / (armRaw + 40) * 100,
+    ddgRaw, ddg: ddgRaw / (ddgRaw + 40) * 100,
     hp:  100 * (1 + foodHp),
   };
 }
 
 function computeDailyDuringWar(preset, prices, player, data, params, consumables) {
   const comps = extractCompanies(data);
-
   const consumablesDaily = (consumables?.total || 0) / Math.max(1, params.warDays);
   const factoryRevenue = comps.reduce((s, c) => s + (c.dailyRevenue || 0), 0);
   const factoryWageCost = comps.reduce((s, c) => s + (c.dailyWageCost || 0), 0);
@@ -1521,35 +1554,25 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
   const workActionsPeace = actionsPerDay(player.eco.energy);
   const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace : null;
 
+  const lootIncome = WAR_LOOT_INCOME_PER_DAY;
   const peaceNet = (wageIncomePeace ?? 0) + factoryNet;
-  const warNet   = factoryNet - consumablesDaily;
+  const warNet   = factoryNet + lootIncome - consumablesDaily;
   const burnRate = peaceNet - warNet;
 
   return {
     consumablesDaily,
     factoryRevenue, factoryWageCost, factoryIngCost, factoryNet,
     factoriesHaveRevenue, factoriesHaveWage,
-    ownWage, workActionsPeace,
-    wageIncomePeace,
+    ownWage, workActionsPeace, wageIncomePeace,
+    lootIncome,
     peaceNet, warNet, burnRate,
     hasOwnWage: ownWage != null,
     consumableLines: consumables?.items || [],
   };
 }
 
-function actionsPerDay(bar, usagePct = 1) {
-  return Math.floor(bar / 10) * 2.4 * usagePct;
-}
-
-function effectiveHitsPerDay(player, params) {
-  if (params.hitsPerDay != null && !isNaN(params.hitsPerDay) && params.hitsPerDay >= 0) {
-    return params.hitsPerDay;
-  }
-  return Math.round(actionsPerDay(player.eco.energy));
-}
-
 /* ═══════════════════════════════════════════════════════════════════
- *  RENDER — PLAYER HEADER
+ *  RENDER — PLAYER HEADER + ROOT
  * ═══════════════════════════════════════════════════════════════════ */
 function renderPlayer(data) {
   if (!data.user) {
@@ -1559,6 +1582,9 @@ function renderPlayer(data) {
   const p = extractPlayer(data);
   cached.player = p;
   cached.data = data;
+
+  // Reset view level to "current level" on a fresh load.
+  viewLevel = null;
 
   const av = $('#avatar');
   if (p.avatarUrl) { av.src = p.avatarUrl; av.hidden = false; }
@@ -1572,30 +1598,11 @@ function renderPlayer(data) {
   const muName = data.mu?.name;
   if (muName) meta.push(`<span class="pill">${escapeHtml(muName)}</span>`);
   if (p.militaryRank != null) {
-    meta.push(`<span class="pill">Military rank <span class="mono">${p.militaryRank}</span></span>`);
+    meta.push(`<span class="pill">Mil rank <span class="mono">${p.militaryRank}</span></span>`);
   }
   $('#player-meta').innerHTML = meta.join(' ');
 
-  $('#combat-info').innerHTML = infoBtn(COMBAT_STAT_DESCRIPTIONS, 'Combat stat reference');
-  $('#economy-info').innerHTML = infoBtn(ECONOMY_STAT_DESCRIPTIONS, 'Economy stat reference');
-  $('#wealth-info').innerHTML = infoBtn([
-    { term: 'Source', desc: 'Reported by the API — recomputed by the game periodically.' },
-    { term: 'Companies', desc: 'Estimated resale value of your built companies.' },
-    { term: 'Items', desc: 'Consumables and materials in your inventory.' },
-    { term: 'Money', desc: 'Liquid bitcoin in your wallet.' },
-    { term: 'Equipment / Weapons', desc: 'Resale value of currently-equipped gear.' },
-  ], 'Wealth help');
-  const wealthTotal = data.user?.stats?.wealth?.total;
-  $('#wealth-badge').textContent = wealthTotal != null ? `${fmtCompact(wealthTotal)} ₿` : '';
-  $('#wealth-content').innerHTML = wealthSection(data);
-  $('#target-info').innerHTML = infoBtn([
-    { term: 'Pick a preset', desc: 'War Basic (default, self-funding) or War High-Damage (pill push, expensive but high output).' },
-    { term: 'Follow the plan', desc: 'Foundations to fix → gear to stockpile → consumables to buy. Each section has its own cost.' },
-    { term: 'During the war', desc: 'Your daily bitcoin flow while fighting — what comes in, what goes out, and the net.' },
-  ], 'Target build help');
-
-  renderCombat(p, data);
-  renderEconomy(p, data);
+  renderCurrentState(p, data);
   renderTargetBuild(p, data);
 
   if (DEBUG) {
@@ -1614,21 +1621,116 @@ function renderPlayer(data) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- *  RENDER — COMBAT CARD
+ *  RENDER — CURRENT STATE (four compact collapsible cards)
  * ═══════════════════════════════════════════════════════════════════ */
-function renderCombat(p, data) {
-  if (data.inventoryError) {
-    $('#combat-content').innerHTML = `<p class="muted">Could not load equipment: <code>${escapeHtml(data.inventoryError)}</code></p>`;
-    return;
-  }
+function renderCurrentState(p, data) {
   const eq = extractEquipment(data.inventory);
-  const d = p.derived;
-  const fightPts = pointsSpent(p.levels, FIGHT_KEYS);
+  const comps = extractCompanies(data);
 
+  const build = buildLabel(p);
   const hitsPerDay = actionsPerDay(p.eco.energy);
-  const dmgPerDay = expectedDamagePerHit(d) * hitsPerDay;
+  const dmgPerDay = expectedDamagePerHit(p.derived) * hitsPerDay;
 
-  $('#combat-content').innerHTML = `
+  const ownWage = offerWage(data.ownWorkOffer);
+  const dailyWageIncome = ownWage != null ? ownWage * actionsPerDay(p.eco.energy) : 0;
+  const factoryNet = comps.reduce((s, c) => s + (c.dailyNet || 0), 0);
+  const totalDailyIncome = factoryNet + dailyWageIncome;
+  const incomeSign = totalDailyIncome >= 0 ? 'pos' : 'neg';
+
+  const wealthTotal = data.user?.stats?.wealth?.total;
+
+  $('#state-content').innerHTML = `
+    ${compactCard('build',
+      `<span class="cc-title">Build</span>
+       <span class="cc-summary">${escapeHtml(build.label)} · <span class="muted">${escapeHtml(build.sub)}</span></span>
+       <span class="cc-aux">Lvl ${p.level}</span>`,
+      renderBuildBody(p)
+    )}
+
+    ${compactCard('damage',
+      `<span class="cc-title">Damage</span>
+       <span class="cc-summary"><span class="mono">${fmtCompact(dmgPerDay)} dmg/day</span> · <span class="muted">${fmtInt(p.derived.atk)} atk · ${fmt(hitsPerDay, 1)} hits</span></span>`,
+      renderDamageBody(p, eq)
+    )}
+
+    ${compactCard('income',
+      `<span class="cc-title">Income</span>
+       <span class="cc-summary"><span class="mono ${incomeSign}">${fmtSigned(totalDailyIncome)}/day</span> · <span class="muted">${comps.length} compan${comps.length === 1 ? 'y' : 'ies'}${dailyWageIncome > 0 ? ` + job (${fmtBtc(dailyWageIncome)})` : ''}</span></span>`,
+      renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet)
+    )}
+
+    ${compactCard('wealth',
+      `<span class="cc-title">Wealth</span>
+       <span class="cc-summary"><span class="mono">${wealthTotal != null ? fmtCompact(wealthTotal) + ' ₿' : 'unavailable'}</span></span>`,
+      renderWealthBody(data)
+    )}
+  `;
+}
+
+function compactCard(id, head, body) {
+  return `<details class="compact-card" data-card="${id}">
+    <summary><span class="caret">▾</span>${head}</summary>
+    <div class="cc-body">${body}</div>
+  </details>`;
+}
+
+function renderBuildBody(p) {
+  const fightPts = pointsSpent(p.levels, FIGHT_KEYS);
+  const ecoPts = pointsSpent(p.levels, ECO_KEYS);
+  const totalCap = p.spentSp + p.availableSp;
+
+  const fightSkills = [
+    ['Attack', p.levels.attack],
+    ['Precision', p.levels.precision],
+    ['Crit chance', p.levels.criticalChance],
+    ['Crit damage', p.levels.criticalDamages],
+    ['Armor', p.levels.armor],
+    ['Dodge', p.levels.dodge],
+    ['Health', p.levels.health],
+    ['Loot chance', p.levels.lootChance],
+    ['Hunger', p.levels.hunger],
+  ];
+  const ecoSkills = [
+    ['Energy', p.levels.energy],
+    ['Entrepreneurship', p.levels.entrepreneurship],
+    ['Production', p.levels.production],
+    ['Companies', p.levels.companies],
+    ['Management', p.levels.management],
+  ];
+
+  return `
+    <div class="skill-cols">
+      <div>
+        <div class="section-label">
+          Fight ${infoBtn(COMBAT_STAT_DESCRIPTIONS, 'Combat stats')}
+          <span class="right">${fightPts}/${totalCap} pts</span>
+        </div>
+        <div class="skills">
+          ${fightSkills.map(([n, v]) => skillRow(n, v)).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="section-label">
+          Eco ${infoBtn(ECONOMY_STAT_DESCRIPTIONS, 'Economy stats')}
+          <span class="right">${ecoPts}/${totalCap} pts</span>
+        </div>
+        <div class="skills">
+          ${ecoSkills.map(([n, v]) => skillRow(n, v)).join('')}
+        </div>
+      </div>
+    </div>
+    ${p.availableSp > 0 ? `<p class="note">You have <strong>${p.availableSp}</strong> unspent skill point${p.availableSp > 1 ? 's' : ''}.</p>` : ''}
+  `;
+}
+
+function skillRow(label, value) {
+  return `<div class="skill"><span class="skill-name">${label}</span><span class="skill-value">${value}</span></div>`;
+}
+
+function renderDamageBody(p, eq) {
+  const d = p.derived;
+  const hitsPerDay = actionsPerDay(p.eco.energy);
+  return `
     <div class="stats">
       <div class="stat"><span class="stat-label">Attack</span><span class="stat-value">${fmtInt(d.atk)}</span></div>
       <div class="stat"><span class="stat-label">Precision</span><span class="stat-value">${fmtInt(d.prc)}%</span></div>
@@ -1638,32 +1740,11 @@ function renderCombat(p, data) {
       <div class="stat"><span class="stat-label">Dodge</span><span class="stat-value">${fmtInt(d.ddg)}%</span></div>
       <div class="stat"><span class="stat-label">Health</span><span class="stat-value">${fmtInt(d.hp)}</span></div>
     </div>
-
     <div class="section">
-      <div class="section-label">Fight skills · ${fightPts}/${p.spentSp + p.availableSp} pts</div>
-      <div class="skills">
-        ${skillRow('Attack', p.levels.attack)}
-        ${skillRow('Precision', p.levels.precision)}
-        ${skillRow('Crit chance', p.levels.criticalChance)}
-        ${skillRow('Crit damage', p.levels.criticalDamages)}
-        ${skillRow('Armor', p.levels.armor)}
-        ${skillRow('Dodge', p.levels.dodge)}
-        ${skillRow('Health', p.levels.health)}
-        ${skillRow('Loot chance', p.levels.lootChance)}
-        ${skillRow('Hunger', p.levels.hunger)}
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-label">Equipped gear</div>
+      <div class="section-label">Equipped gear<span class="right">${fmt(hitsPerDay, 1)} hits/day</span></div>
       ${equipmentTable(eq)}
     </div>
   `;
-  $('#combat-badge').textContent = `${fmtCompact(dmgPerDay)} dmg/day`;
-}
-
-function skillRow(label, value) {
-  return `<div class="skill"><span class="skill-name">${label}</span><span class="skill-value">${value}</span></div>`;
 }
 
 const STAT_LABELS = {
@@ -1686,7 +1767,6 @@ function equipmentTable(eq) {
     const statStr = statKeys
       .map(sk => { const v = item.skills[sk]; return v ? `${fmtInt(v)} ${STAT_LABELS[sk] || sk}` : null; })
       .filter(Boolean).join(', ') || '–';
-    /* Item cell: plain name (no rarity color) + small rarity tag after. */
     const nameCell = item.rarity
       ? `${escapeHtml(item.displayName)}${rarityTag(item.rarity)}`
       : `<span class="mono">${escapeHtml(item.code)}</span>`;
@@ -1703,122 +1783,70 @@ function equipmentTable(eq) {
   </table>`;
 }
 
-/* Wealth section — surfaces user.stats.wealth (breakdown of your net
-   worth) and case-opening history. All data comes from user.getUserById,
-   no extra API call needed. */
-function wealthSection(data) {
-  const stats = data.user?.stats || {};
-  const wealth = stats.wealth;
-
-  let wealthHtml = '';
-  if (!wealth || typeof wealth !== 'object') {
-    wealthHtml = `<p class="muted" style="font-size:0.82rem; margin:0;">Wealth data unavailable.</p>`;
-  } else {
-    const rows = [
-      ['Companies', wealth.companies],
-      ['Items',     wealth.items],
-      ['Money',     wealth.money],
-      ['Equipment', wealth.equipments],
-      ['Weapons',   wealth.weapons],
-    ].filter(([, v]) => v != null);
-
-    const tbody = rows.map(([label, value]) => `
-      <tr>
-        <td>${label}</td>
-        <td class="num">${fmtBtc(value)}</td>
-      </tr>
-    `).join('');
-
-    wealthHtml = `<table class="list"><tbody>
-      ${tbody}
-      <tr class="total">
-        <td><strong>Total</strong></td>
-        <td class="num"><strong>${fmtBtc(wealth.total)}</strong></td>
-      </tr>
-    </tbody></table>`;
-  }
-
-  return wealthHtml;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
- *  RENDER — ECONOMY CARD
- * ═══════════════════════════════════════════════════════════════════ */
-function renderEconomy(p, data) {
-  if (data.companiesError) {
-    $('#economy-content').innerHTML = `<p class="muted">Could not load companies: <code>${escapeHtml(data.companiesError)}</code></p>`;
-    return;
-  }
-
-  const comps = extractCompanies(data);
+function renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet) {
   const eco = p.eco;
-  const ecoPts = pointsSpent(p.levels, ECO_KEYS);
-
   const workActions = actionsPerDay(eco.energy, 1);
   const entreActions = actionsPerDay(eco.entrepreneurship, 1);
-  const ownWage = offerWage(data.ownWorkOffer);
-  const dailyWageIncome = ownWage != null ? ownWage * workActions : null;
 
-  const companyTip = [
-    { term: 'Real data', desc: 'Your companies, worker count, wages and fidelity, item market prices.' },
-    { term: 'Estimated', desc: `Each worker assumed at ~${FACTORY_ASSUMPTIONS.workerActionsPerDay} actions/day with production ~${FACTORY_ASSUMPTIONS.workerProduction}; AE output uses a linear model from AE 5 = 120; processed-goods recipes assume 1:1 ingredient ratios.` },
-    { term: 'Per company', desc: 'Hover the ? next to a company name for its AE + worker + ingredient breakdown.' },
-    { term: 'Calibration', desc: 'If totals look wrong vs in-game, mention which company and we will tune defaults.' },
-  ];
-  const dailyActionsTip = [
-    { term: 'Energy pool', desc: 'Powers fighting and working-for-others — same pool, you pick one each day.' },
-    { term: 'Entrepreneurship pool', desc: 'Powers self-work in your own companies — separate pool, runs in parallel.' },
-    { term: 'Current job wage', desc: 'Bitcoin per action × actions per day. Goes to 0 during war while energy is spent fighting.' },
-  ];
+  const factoryRevenue = comps.reduce((s, c) => s + (c.dailyRevenue || 0), 0);
+  const factoryWageCost = comps.reduce((s, c) => s + (c.dailyWageCost || 0), 0);
+  const factoryIngCost = comps.reduce((s, c) => s + (c.dailyIngredientCost || 0), 0);
 
-  $('#economy-content').innerHTML = `
-    <div class="stats">
-      <div class="stat"><span class="stat-label">Energy</span><span class="stat-value">${eco.energy}</span></div>
-      <div class="stat"><span class="stat-label">Entrepreneur&shy;ship</span><span class="stat-value">${eco.entrepreneurship}</span></div>
-      <div class="stat"><span class="stat-label">Production</span><span class="stat-value">${eco.production}</span></div>
-      <div class="stat"><span class="stat-label">Companies</span><span class="stat-value">${comps.length} / ${eco.companies}</span></div>
-      <div class="stat"><span class="stat-label">Manage&shy;ment</span><span class="stat-value">${eco.management}</span></div>
-    </div>
-
-    <div class="section">
-      <div class="section-label">Eco skills · ${ecoPts}/${p.spentSp + p.availableSp} pts</div>
-      <div class="skills">
-        ${skillRow('Energy', p.levels.energy)}
-        ${skillRow('Entrepreneurship', p.levels.entrepreneurship)}
-        ${skillRow('Production', p.levels.production)}
-        ${skillRow('Companies', p.levels.companies)}
-        ${skillRow('Management', p.levels.management)}
+  return `
+    <div class="bs-grid" style="margin-bottom: 0.85rem;">
+      <div class="bs-block">
+        <h5>Daily inflow</h5>
+        ${ownWage != null ? `
+          <div class="bs-line">
+            <span class="ll">Job wage<span class="qty" style="color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem;">${fmt(ownWage, 3)} × ${fmt(workActions, 1)}</span></span>
+            <span class="lv pos">${fmtSigned(dailyWageIncome)}</span>
+          </div>` : ''}
+        <div class="bs-line">
+          <span class="ll">Company revenue</span>
+          <span class="lv pos">${fmtSigned(factoryRevenue)}</span>
+        </div>
+        <div class="bs-line total">
+          <span class="ll">Total in</span>
+          <span class="lv pos">${fmtSigned(factoryRevenue + dailyWageIncome)}</span>
+        </div>
+      </div>
+      <div class="bs-block">
+        <h5>Daily costs</h5>
+        ${factoryWageCost > 0 ? `<div class="bs-line">
+          <span class="ll">Worker wages</span>
+          <span class="lv neg">${fmtSigned(-factoryWageCost)}</span>
+        </div>` : ''}
+        ${factoryIngCost > 0 ? `<div class="bs-line">
+          <span class="ll">Ingredient costs</span>
+          <span class="lv neg">${fmtSigned(-factoryIngCost)}</span>
+        </div>` : ''}
+        ${factoryWageCost === 0 && factoryIngCost === 0 ? `<div class="bs-line"><span class="ll muted">No recurring costs</span><span class="lv">${fmtBtc(0)}</span></div>` : ''}
+        <div class="bs-line total">
+          <span class="ll">Total out</span>
+          <span class="lv neg">${fmtSigned(-(factoryWageCost + factoryIngCost))}</span>
+        </div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-label">Daily actions ${infoBtn(dailyActionsTip)}</div>
+      <div class="section-label">Pools<span class="right">Energy ${eco.energy} · Entr ${eco.entrepreneurship}</span></div>
       <div class="skills">
         <div class="skill">
-          <span class="skill-name">Energy pool</span>
+          <span class="skill-name">Energy pool (work or fight)</span>
           <span class="skill-value"><span class="total">${fmt(workActions, 1)}</span> <span class="sub">actions/day</span></span>
         </div>
         <div class="skill">
-          <span class="skill-name">Entrepreneurship pool</span>
+          <span class="skill-name">Entrepreneurship pool (self-work)</span>
           <span class="skill-value"><span class="total">${fmt(entreActions, 1)}</span> <span class="sub">actions/day</span></span>
         </div>
-        ${ownWage != null ? `
-        <div class="skill">
-          <span class="skill-name">Current job wage</span>
-          <span class="skill-value"><span class="total">${fmtBtc(dailyWageIncome)}/day</span> <span class="sub">at ${fmt(ownWage, 3)} ₿/action</span></span>
-        </div>` : ''}
       </div>
     </div>
 
     <div class="section">
-      <div class="section-label">Companies · ${comps.length}/${eco.companies} ${infoBtn(companyTip)}</div>
+      <div class="section-label">Per company · ${comps.length}/${eco.companies}</div>
       ${companiesTable(comps)}
     </div>
   `;
-  const factoryNet = comps.reduce((s, c) => s + (c.dailyNet || 0), 0);
-  const totalDailyIncome = factoryNet + (dailyWageIncome || 0);
-  const incomeSign = totalDailyIncome > 0 ? '+' : '';
-  $('#economy-badge').textContent = `${incomeSign}${fmtCompact(totalDailyIncome)} ₿/day`;
 }
 
 function companyBreakdownRows(c) {
@@ -1829,7 +1857,7 @@ function companyBreakdownRows(c) {
     const fidList = c.workers.map(w => `fid ${w.fidelity} @ ${fmt(w.wage, 3)} ₿/act`).join(', ');
     rows.push({ term: 'Workers', desc: `${c.workers.length} (${fidList}) → +${fmtInt(c.workerPP)} units/day, wages ${fmtBtc(c.dailyWageCost)}/day` });
   } else if (c.workerCount > 0) {
-    rows.push({ term: 'Workers', desc: `${c.workerCount} worker(s), details not loaded — estimated +${fmtInt(c.workerPP)} units/day at 0 fidelity` });
+    rows.push({ term: 'Workers', desc: `${c.workerCount} worker(s), details not loaded` });
   } else {
     rows.push({ term: 'Workers', desc: 'None' });
   }
@@ -1842,13 +1870,9 @@ function companyBreakdownRows(c) {
     rows.push({ term: 'Revenue', desc: 'Market price unavailable' });
   }
 
-  if (c.isProcessed) {
-    if (c.dailyIngredientCost != null) {
-      const recipeStr = c.recipeBreakdown.map(r => `${r.qty}× ${r.ingredient}`).join(' + ');
-      rows.push({ term: 'Ingredients', desc: `${recipeStr} → −${fmtBtc(c.dailyIngredientCost)}/day` });
-    } else {
-      rows.push({ term: 'Ingredients', desc: 'Some ingredient prices unavailable' });
-    }
+  if (c.isProcessed && c.dailyIngredientCost != null) {
+    const recipeStr = c.recipeBreakdown.map(r => `${r.qty}× ${r.ingredient}`).join(' + ');
+    rows.push({ term: 'Ingredients', desc: `${recipeStr} → −${fmtBtc(c.dailyIngredientCost)}/day` });
   }
 
   if (c.dailyNet != null) rows.push({ term: 'Net', desc: `${fmtSigned(c.dailyNet)}/day` });
@@ -1865,7 +1889,7 @@ function companiesTable(comps) {
       ? `<td class="${c.dailyNet >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.dailyNet)}</td>`
       : `<td class="num muted">–</td>`;
     return `<tr>
-      <td>${escapeHtml(c.name)}&nbsp;<span class="mono" style="color: var(--dimmer); font-size: 0.78rem; margin-left: 0.25rem;">${escapeHtml(c.itemCode)}</span>&nbsp;${infoBtn(companyBreakdownRows(c), c.name + ' breakdown')}</td>
+      <td>${escapeHtml(c.name)}&nbsp;<span class="mono" style="color: var(--dimmer); font-size: 0.76rem; margin-left: 0.25rem;">${escapeHtml(c.itemCode)}</span>&nbsp;${infoBtn(companyBreakdownRows(c), c.name + ' breakdown')}</td>
       <td>${c.aeLevel ? 'AE ' + c.aeLevel : '–'}</td>
       <td class="num">${c.workerCount}</td>
       ${revCol}
@@ -1874,127 +1898,155 @@ function companiesTable(comps) {
   });
   return `<table class="list">
     <thead><tr>
-      <th>Company</th><th>Engine</th>
-      <th>Workers</th><th>Revenue</th><th>Net</th>
+      <th>Company</th><th>Engine</th><th>Workers</th><th>Revenue</th><th>Net</th>
     </tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 }
 
+function renderWealthBody(data) {
+  const stats = data.user?.stats || {};
+  const wealth = stats.wealth;
+  if (!wealth || typeof wealth !== 'object') {
+    return `<p class="muted" style="font-size:0.82rem; margin:0;">Wealth data unavailable.</p>`;
+  }
+  const rows = [
+    ['Companies', wealth.companies],
+    ['Items',     wealth.items],
+    ['Money',     wealth.money],
+    ['Equipment', wealth.equipments],
+    ['Weapons',   wealth.weapons],
+  ].filter(([, v]) => v != null);
+
+  const tbody = rows.map(([label, value]) => `
+    <tr><td>${label}</td><td class="num">${fmtBtc(value)}</td></tr>
+  `).join('');
+
+  return `<table class="list"><tbody>
+    ${tbody}
+    <tr><td><strong>Total</strong></td><td class="num"><strong>${fmtBtc(wealth.total)}</strong></td></tr>
+  </tbody></table>`;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
- *  RENDER — TARGET BUILD SECTION
+ *  RENDER — TARGET BUILD (5 collapsible boxes)
  * ═══════════════════════════════════════════════════════════════════ */
 function renderTargetBuild(p, data) {
   const preset = PRESETS[selectedPreset];
+  const currentLevel = parseInt(p.level, 10) || 0;
+
+  // Resolve effective plan level. null = "my current level".
+  // Floor at 20 (no published plan below that), cap at 30.
+  const minLevel = Math.max(20, currentLevel);
+  const effectiveLevel = viewLevel != null ? viewLevel : minLevel;
+  const isProjected = currentLevel < 20;
+  const isUnsupported = currentLevel > 30;
+
+  // Pre-compute self-sustain status for both presets, for the tab badges.
+  const tabBadges = {};
+  for (const key of Object.keys(PRESETS)) {
+    const ps = PRESETS[key];
+    const tempParams = { ...warParams, warDays: warParams.warDays };
+    const cons = computeConsumables(ps, data.prices, p, tempParams);
+    const eq = extractEquipment(data.inventory);
+    const gear = computeGearNeeds(eq, ps, data.prices, tempParams);
+    const daily = computeDailyDuringWar(ps, data.prices, p, data, tempParams, cons);
+    const selfFunding = daily.warNet >= 0;
+    tabBadges[key] = {
+      selfFunding,
+      label: selfFunding ? '✓ Self-funding' : '⚠ Burns ₿',
+      gearTotal: gear.total + cons.total,
+    };
+  }
+
   const target = computeTargetStats(preset, p.militaryRankPercent);
-  const current = p.derived;
   const eq = extractEquipment(data.inventory);
   const comps = extractCompanies(data);
-  const havePrices = !!data.prices && Object.keys(data.prices).length > 0;
-
   const foundations = computeFoundations(p, comps, preset);
   const gearNeeds = computeGearNeeds(eq, preset, data.prices, warParams);
   const consumables = computeConsumables(preset, data.prices, p, warParams);
   const daily = computeDailyDuringWar(preset, data.prices, p, data, warParams, consumables);
 
-  const hitsToday = effectiveHitsPerDay(p, warParams);
-  const hitsAutoDerived = warParams.hitsPerDay == null;
+  const totalToPrepare = (gearNeeds.total || 0) + (consumables.total || 0);
+  const grandTotalSub = gearNeeds.anyMissing || consumables.anyMissing
+    ? 'Some prices missing — total is a lower bound.'
+    : `${escapeHtml(preset.daysLabel || 'War days')}: ${warParams.warDays}`;
 
-  /* Skill plan card — only when preset has a plan and player is below cap.
-     Marks past-level entries as "done", the first future entry as "next". */
-  let skillPlanCard = '';
-  if (preset.skillPlan) {
-    const currentLevel = parseInt(p.level, 10) || 0;
-    if (currentLevel >= 30) {
-      skillPlanCard = `<div class="card" style="margin-top: 1rem;">
-        <h3><span>Skill plan</span></h3>
-        <p class="placeholder-text ok">✓ Level 30 reached — base plan complete. Customize from here.</p>
-      </div>`;
-    } else {
-      const sortedPlan = [...preset.skillPlan].sort((a, b) => a.level - b.level);
-      let nextMarked = false;
-      const rows = sortedPlan.map(plan => {
-        let cls = 'plan-row';
-        let badge = '';
-        if (plan.level <= currentLevel) {
-          cls += ' done';
-          badge = '<span class="plan-badge done">done</span>';
-        } else if (!nextMarked) {
-          cls += ' next';
-          badge = '<span class="plan-badge next">next</span>';
-          nextMarked = true;
-        }
-        const spend = plan.skill
-          ? `+1 ${escapeHtml(plan.label)}`
-          : `<span class="muted">${escapeHtml(plan.label)}</span>`;
-        return `<div class="${cls}">
-          <span class="plan-level">Lvl ${plan.level}</span>
-          <span class="plan-spend">${spend}</span>
-          ${badge}
-        </div>`;
-      }).join('');
-      const skillPlanTip = [
-        { term: 'Where to spend', desc: 'For each level from now to 30, which skill to put your point into.' },
-        { term: 'Save SP', desc: 'Some levels save SP for a bigger spend next level (skills cost more as they go up).' },
-        { term: 'Lvl 20 baseline', desc: 'Plan assumes: Atk 5, Prec 4, CC 3, CD 2, Arm 4, Ddg 4, HP 4, Loot 2, Hunger 2, Companies 4.' },
-      ];
-      skillPlanCard = `<div class="card" style="margin-top: 1rem;">
-        <h3><span>Skill plan ${infoBtn(skillPlanTip, 'Skill plan help')}</span><span class="badge">Lvl ${currentLevel} → 30</span></h3>
-        <div class="plan-list">${rows}</div>
-      </div>`;
-    }
-  }
+  // Tabs
+  const tabsHtml = Object.entries(PRESETS).map(([key, ps]) => {
+    const badge = tabBadges[key];
+    return `<button type="button" class="tab ${key === selectedPreset ? 'active' : ''}" data-preset="${key}">
+      <span class="tab-name">${escapeHtml(ps.name)}</span>
+      <span class="tab-sub">${escapeHtml(ps.sub || '')}</span>
+      <span class="tab-badge ${badge.selfFunding ? 'self-funding' : 'burns'}">${escapeHtml(badge.label)}</span>
+    </button>`;
+  }).join('');
+
+  // Level + duration control
+  const levelControl = renderLevelControl(currentLevel, effectiveLevel, isProjected, isUnsupported, preset);
+
+  // The 5 boxes
+  const boxes = [
+    targetBox('skills', '1', 'Skill allocation',
+      skillSummary(p, preset, effectiveLevel),
+      renderSkillBox(p, preset, effectiveLevel, currentLevel)),
+    targetBox('companies', '2', 'Companies',
+      foundationsSummary(foundations, comps),
+      renderCompaniesBox(p, data, foundations, comps, preset)),
+    targetBox('gear', '3', 'Gear & consumables',
+      gearSummary(gearNeeds, consumables),
+      renderGearBox(gearNeeds, consumables, preset)),
+    targetBox('modelDay', '4', 'Model war day',
+      `<span class="mono ${daily.warNet >= 0 ? 'pos' : 'neg'}">${fmtSigned(daily.warNet)}/day net</span>`,
+      renderModelDayBox(daily, warParams, preset)),
+    targetBox('bottomLine', '5', 'Bottom line',
+      bottomLineSummary(daily, totalToPrepare, warParams),
+      renderBottomLineBox(daily, totalToPrepare, warParams, preset, gearNeeds, consumables)),
+  ].join('');
 
   $('#target-content').innerHTML = `
-    <div class="picker">
-      ${Object.entries(PRESETS).map(([key, ps]) => `
-        <button type="button" data-preset="${key}" class="${key === selectedPreset ? 'active' : ''}">${escapeHtml(ps.name)}</button>
-      `).join('')}
-    </div>
-    <p class="preset-tagline">${escapeHtml(preset.tagline)}</p>
-    ${preset.outcome ? `<p class="preset-outcome"><strong>Outcome</strong>${escapeHtml(preset.outcome)}</p>` : ''}
+    <div class="tabs">${tabsHtml}</div>
+    ${preset.outcome ? `<p class="placeholder-text" style="margin-bottom: 0.7rem;"><strong style="color: var(--accent);">Outcome</strong> ${escapeHtml(preset.outcome)}</p>` : ''}
+    ${levelControl}
 
-    ${warParamsBar(p, preset, hitsToday, hitsAutoDerived)}
-
-    <div class="grid">
-      <div class="card">
-        <h3>
-          <span>Target combat</span>
-          <span class="badge">${fmtInt(target.atk)} attack</span>
-        </h3>
-        ${targetStatsBlock(target, current)}
-        <div class="section">
-          <div class="section-label">Active during fighting</div>
-          <p class="placeholder-text">${escapeHtml(describeBuffs(preset.buffs))}</p>
-        </div>
+    <div class="grand-banner">
+      <div>
+        <div class="label">Total to prepare</div>
+        <div class="sub">${grandTotalSub}</div>
       </div>
-
-      <div class="card">
-        <h3><span>What to do</span></h3>
-        ${actionPlanSection(foundations, gearNeeds, consumables, preset, havePrices)}
-      </div>
+      <div class="mono">${fmtBtc(totalToPrepare)}</div>
     </div>
 
-    ${skillPlanCard}
-
-    <div class="card" style="margin-top: 1rem;">
-      <h3><span>Daily during war</span><span class="badge">${fmtSigned(daily.warNet - 0)}/day net</span></h3>
-      ${dailyDuringWarSection(daily, havePrices, warParams, preset)}
-    </div>
+    ${boxes}
   `;
 
-  document.querySelectorAll('#target-content .picker button').forEach(btn => {
+  // Wire up handlers.
+  $$('#target-content .tab').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedPreset = btn.dataset.preset;
-      // Reset the days field to the new preset's default — semantics change
-      // (war days for Basic vs pill push days for High-Damage).
       warParams.warDays = PRESETS[selectedPreset].daysDefault ?? DEFAULT_WAR_PARAMS.warDays;
       renderTargetBuild(p, data);
     });
   });
 
+  $$('#target-content .target-box-head').forEach(h => {
+    h.addEventListener('click', () => {
+      const box = h.closest('.target-box');
+      const id = box.dataset.box;
+      targetExpanded[id] = !targetExpanded[id];
+      box.classList.toggle('open', targetExpanded[id]);
+    });
+  });
+
+  const lvSelect = $('#plan-level');
+  if (lvSelect) {
+    lvSelect.addEventListener('change', () => {
+      const v = parseInt(lvSelect.value, 10);
+      viewLevel = isNaN(v) ? null : v;
+      renderTargetBuild(p, data);
+    });
+  }
   const wDays = $('#war-days');
-  const wHits = $('#war-hits');
   if (wDays) {
     wDays.addEventListener('change', () => {
       const v = parseInt(wDays.value, 10);
@@ -2003,196 +2055,257 @@ function renderTargetBuild(p, data) {
       renderTargetBuild(p, data);
     });
   }
-  if (wHits) {
-    wHits.addEventListener('change', () => {
-      const raw = wHits.value.trim();
-      if (raw === '' || raw === 'auto') warParams.hitsPerDay = null;
-      else {
-        const v = parseInt(raw, 10);
-        warParams.hitsPerDay = isNaN(v) || v < 0 ? null : v;
-      }
-      renderTargetBuild(p, data);
-    });
-  }
 }
 
-function warParamsBar(player, preset, hitsToday, hitsAutoDerived) {
-  const daysLabel = preset.daysLabel || 'War days';
-  const daysTip = [
-    { term: 'War days', desc: 'Total length of the war. Drives sustainable ammo / food quantities for the Basic build.' },
-    { term: 'Pill push days', desc: 'For High-Damage: how many days within the war you intend to pop pills. The stockpile (gear + ammo + food + pills) scales with this.' },
-  ];
-  const hitsTip = [
-    { term: 'Auto', desc: `Derived from your Energy (${player.eco.energy} → ${Math.round(actionsPerDay(player.eco.energy))} actions/day).` },
-    { term: 'Sustainable build', desc: 'Hits/day drives ammo and food quantities.' },
-    { term: 'Hard push', desc: 'Hits/day is ignored — pill push uses fixed stockpile quantities per the preset.' },
-  ];
-  const hitsDisabled = preset.hitsFieldEnabled === false;
-  return `<div class="war-params">
-    <label>${escapeHtml(daysLabel)}
+function targetBox(id, num, title, summary, body) {
+  const open = targetExpanded[id];
+  return `<div class="target-box${open ? ' open' : ''}" data-box="${id}">
+    <div class="target-box-head">
+      <span class="caret">▾</span>
+      <span class="target-box-num">${num}.</span>
+      <span class="target-box-title">${escapeHtml(title)}</span>
+      <span class="target-box-summary">${summary || ''}</span>
+    </div>
+    <div class="target-box-body">${body}</div>
+  </div>`;
+}
+
+function renderLevelControl(currentLevel, effectiveLevel, isProjected, isUnsupported, preset) {
+  if (isUnsupported) {
+    return `<div class="plan-control">
+      <span class="muted">Plan for level:</span>
+      <strong style="color: var(--warn);">Lvl ${currentLevel} not modelled</strong>
+      ${infoBtn('Published guides cover Levels 20-30. For Lvl 31+ we use the Lvl 30 endgame plan as a reference.', 'Unsupported level')}
+      <label>${escapeHtml(preset.daysLabel || 'War days')}
+        <input id="war-days" type="number" min="1" max="30" value="${warParams.warDays}">
+      </label>
+      <p class="plan-note">Showing Lvl 30 endgame plan as a fallback. Lvl 30+ builds haven't been modelled yet.</p>
+    </div>`;
+  }
+
+  const minLevel = Math.max(20, currentLevel);
+  const options = [];
+  for (let l = minLevel; l <= 30; l++) {
+    const isCurrent = l === currentLevel;
+    const label = isCurrent ? `Lvl ${l} (my level)` : `Lvl ${l}`;
+    options.push(`<option value="${l}" ${l === effectiveLevel ? 'selected' : ''}>${label}</option>`);
+  }
+
+  const note = isProjected
+    ? `You're at Lvl ${currentLevel} — Lvl 20 is the earliest plan we have. Numbers below assume you've levelled up first.`
+    : '';
+
+  return `<div class="plan-control">
+    <label>Plan for
+      <select id="plan-level">${options.join('')}</select>
+    </label>
+    <label>${escapeHtml(preset.daysLabel || 'War days')}
       <input id="war-days" type="number" min="1" max="30" value="${warParams.warDays}">
     </label>
-    ${infoBtn(daysTip, 'Days field help')}
-    <label class="${hitsDisabled ? 'disabled' : ''}">Hits/day
-      <input id="war-hits" type="number" min="0" max="500" value="${hitsToday}" placeholder="auto" ${hitsDisabled ? 'disabled' : ''}>
-      ${hitsDisabled ? '<span class="auto-tag">(not used)</span>' : (hitsAutoDerived ? '<span class="auto-tag">(from energy)</span>' : '')}
-    </label>
-    ${infoBtn(hitsTip, 'War parameters')}
+    ${infoBtn([
+      { term: 'Plan for', desc: 'Pick the level you want the plan computed for. Skill allocation steps update; gear/consumables stay the same.' },
+      { term: preset.daysLabel || 'War days', desc: 'For Basic: full war duration. For High-Damage: pill push days (when you intend to pop pills).' },
+    ], 'Plan controls')}
+    ${note ? `<p class="plan-note">${escapeHtml(note)}</p>` : ''}
   </div>`;
 }
 
-function describeBuffs(buffs) {
-  const parts = [];
-  if (buffs.pill) parts.push('Pill (+60% damage)');
-  const ammoLabel = { light: 'Light Ammo (+10% damage)', ammo: 'Medium Ammo (+20% damage)', heavy: 'Heavy Ammo (+40% damage)' }[buffs.ammo];
-  if (ammoLabel) parts.push(ammoLabel);
-  const foodLabel = { bread: 'Bread (+10% health)', steak: 'Steak (+15% health)', fish: 'Salmon (+20% health)' }[buffs.food];
-  if (foodLabel) parts.push(foodLabel);
-  return parts.length ? parts.join(' · ') : 'No active buffs';
+/* ─── Box summaries (single-line right-aligned) ──────────────────── */
+function skillSummary(p, preset, effectiveLevel) {
+  if (!preset.skillPlan) return '<span class="muted">no plan</span>';
+  const currentLevel = parseInt(p.level, 10) || 0;
+  if (currentLevel >= 30) return '<span class="pos">✓ Lvl 30 reached</span>';
+  const remaining = preset.skillPlan.filter(s => s.level > Math.max(currentLevel, effectiveLevel - 1)).length;
+  return `<span class="muted">${remaining} step${remaining === 1 ? '' : 's'} to Lvl 30</span>`;
 }
 
-function targetStatsBlock(target, current) {
-  const stat = (label, t, c, suffix = '') => {
-    const tv = Math.round(t);
-    const cv = Math.round(c);
-    const delta = tv - cv;
-    const sign = delta > 0 ? '+' : '';
-    const deltaStr = delta === 0 ? '' : `<span class="delta">${sign}${fmtInt(delta)}${suffix}</span>`;
-    return `<div class="stat">
-      <span class="stat-label">${label}</span>
-      <span class="stat-value">${fmtInt(tv)}${suffix}${deltaStr}</span>
-    </div>`;
-  };
-  return `<div class="stats">
-    ${stat('Attack', target.atk, current.atk)}
-    ${stat('Precision', target.prc, current.prc, '%')}
-    ${stat('Crit chance', target.cc, current.cc, '%')}
-    ${stat('Crit damage', target.cd, current.cd, '%')}
-    ${stat('Armor', target.arm, current.arm, '%')}
-    ${stat('Dodge', target.ddg, current.ddg, '%')}
-    ${stat('Health', target.hp, current.hp)}
-  </div>`;
+function foundationsSummary(foundations, comps) {
+  if (foundations.items.length === 0) return '<span class="pos">✓ Ready</span>';
+  const need = foundations.items.length;
+  return `<span class="warn">${need} action${need > 1 ? 's' : ''} needed</span>`;
 }
 
-function actionPlanSection(foundations, gearNeeds, consumables, preset, havePrices) {
+function gearSummary(gearNeeds, consumables) {
   const gearTotal = gearNeeds.total || 0;
-  const consumablesTotal = consumables.total || 0;
-  const grandTotal = gearTotal + consumablesTotal;
+  const consTotal = consumables.total || 0;
+  const total = gearTotal + consTotal;
+  if (total === 0 && gearNeeds.items.length === 0 && consumables.items.length === 0) {
+    return '<span class="pos">✓ None needed</span>';
+  }
+  return `<span class="mono">${fmtBtc(total)}</span>${gearNeeds.anyMissing || consumables.anyMissing ? ' <span class="muted">+ unknowns</span>' : ''}`;
+}
 
-  let foundationsHtml = '';
-  if (foundations.items.length === 0) {
-    foundationsHtml = `<div class="action-list"><div class="action-row ok-row">
-      <div class="action-main">
-        <span class="action-what">✓ Foundations ready</span>
-        ${foundations.note ? `<span class="action-detail">${escapeHtml(foundations.note)}</span>` : ''}
-      </div>
-    </div></div>`;
-  } else {
-    foundationsHtml = `<div class="action-list">${foundations.items.map(actionRow).join('')}</div>
-      ${foundations.note ? `<p class="note">${escapeHtml(foundations.note)}</p>` : ''}`;
+function bottomLineSummary(daily, totalToPrepare, params) {
+  const warTotal = daily.warNet * params.warDays;
+  const grandSwing = warTotal - totalToPrepare;
+  return `<span class="mono ${grandSwing >= 0 ? 'pos' : 'neg'}">${fmtSigned(grandSwing)}</span>`;
+}
+
+/* ─── Box bodies ─────────────────────────────────────────────────── */
+function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
+  if (!preset.skillPlan) {
+    return `<p class="placeholder-text">No published skill plan for this preset yet.</p>`;
+  }
+  if (currentLevel >= 30) {
+    return `<p class="placeholder-text ok">✓ You're at Lvl 30+. The base plan is complete — customize from here.</p>`;
   }
 
+  const sorted = [...preset.skillPlan].sort((a, b) => a.level - b.level);
+  // Filter: at "Lvl X" view, show rows for levels >= X.
+  // Earlier levels (if current player is between 20 and X) are still shown
+  // as done/baseline but de-emphasized.
+  const showFromLevel = Math.max(21, effectiveLevel + 1);
+  let nextMarked = false;
+  const rows = sorted
+    .filter(plan => plan.level > Math.max(20, currentLevel))
+    .map(plan => {
+      let cls = 'plan-row';
+      let badge = '';
+      // "Next" is the first row at-or-above effectiveLevel that we haven't marked.
+      if (plan.level >= showFromLevel && !nextMarked) {
+        cls += ' next';
+        badge = '<span class="plan-badge next">next</span>';
+        nextMarked = true;
+      }
+      const spend = plan.skill
+        ? `+1 ${escapeHtml(plan.label)}`
+        : `<span class="muted">${escapeHtml(plan.label)}</span>`;
+      return `<div class="${cls}">
+        <span class="plan-level">Lvl ${plan.level}</span>
+        <span class="plan-spend">${spend}</span>
+        ${badge}
+      </div>`;
+    }).join('');
+
+  const note = currentLevel < 20
+    ? `You're at Lvl ${currentLevel}. The plan starts at Lvl 21 (after the Lvl 20 baseline build). Get to Lvl 20 first by working and battling.`
+    : currentLevel < effectiveLevel
+      ? `Showing the plan from Lvl ${effectiveLevel + 1} onwards. Levels ${currentLevel + 1}–${effectiveLevel} are assumed done.`
+      : '';
+
+  const selfSustainable = !preset.buffs.pill;
+  const sustainNote = selfSustainable
+    ? '<p class="placeholder-text ok" style="margin-top: 0.6rem;">✓ Self-sustainable: this plan keeps 4 SP in the Companies skill (=6 max), enough to run 6 factories on AE while fighting.</p>'
+    : '<p class="placeholder-text warn" style="margin-top: 0.6rem;">⚠ Pill push: heavy bitcoin burn. Foundations matter more — see Companies box.</p>';
+
+  return `
+    <div class="plan-list">${rows}</div>
+    ${note ? `<p class="note">${escapeHtml(note)}</p>` : ''}
+    ${sustainNote}
+  `;
+}
+
+function renderCompaniesBox(p, data, foundations, comps, preset) {
+  const eco = p.eco;
+  const minCo = foundations.minCompanies;
+  const minAe = foundations.minAe;
+
+  let actionsHtml;
+  if (foundations.items.length === 0) {
+    actionsHtml = `<p class="placeholder-text ok">✓ Foundations ready — ${comps.length} compan${comps.length === 1 ? 'y' : 'ies'} at AE ${minAe}+.</p>`;
+  } else {
+    actionsHtml = `<div class="action-list">${foundations.items.map(actionRow).join('')}</div>`;
+  }
+
+  // Workforce check — flag if the player can't manage the workers their
+  // build implies, or if they're overcommitted.
+  const totalWorkers = comps.reduce((s, c) => s + (c.workerCount || 0), 0);
+  let workforceHtml = '';
+  if (totalWorkers > eco.management) {
+    workforceHtml = `<p class="placeholder-text warn">⚠ You have ${totalWorkers} worker${totalWorkers > 1 ? 's' : ''} but only ${eco.management} management capacity. Some can't be hired.</p>`;
+  }
+
+  return `
+    <div class="section">
+      <div class="section-label">Required state<span class="right">${minCo} companies @ AE ${minAe}+</span></div>
+      <p class="note" style="margin-top: 0;">${escapeHtml(foundations.note)}</p>
+    </div>
+    <div class="section">
+      <div class="section-label">Current status<span class="right">${comps.length} / ${eco.companies} built · ${comps.filter(c => c.aeLevel >= minAe).length} at AE ${minAe}+</span></div>
+      ${companiesTable(comps)}
+    </div>
+    <div class="section">
+      <div class="section-label">What to fix</div>
+      ${actionsHtml}
+      ${workforceHtml}
+    </div>
+  `;
+}
+
+function renderGearBox(gearNeeds, consumables, preset) {
   let gearHtml;
   if (gearNeeds.items.length === 0) {
-    gearHtml = `<p class="placeholder-text ok">✓ No gear to acquire.</p>`;
+    gearHtml = `<p class="placeholder-text ok">✓ Gear ready — nothing to buy.</p>`;
   } else {
     const rows = gearNeeds.items.map(it => actionRow({
-      /* Gear row: plain item name + rarity tag, then quantity. */
       what: `${escapeHtml(gearItemName(it.slot, it.targetRarity))}${rarityTag(it.targetRarity)} × ${fmtInt(it.qty)}`,
       detail: it.detail,
       cost: it.line != null ? it.line : null,
     })).join('');
-    gearHtml = `<div class="action-list">${rows}</div>
-      ${gearNeeds.anyMissing ? '<p class="note">Some gear prices not in market data — those lines show "price unknown" and aren\'t in the total.</p>' : ''}`;
+    gearHtml = `<div class="action-list">${rows}</div>`;
   }
 
   let consumablesHtml;
   if (consumables.items.length === 0) {
-    consumablesHtml = `<p class="placeholder-text">No consumables needed for this build.</p>`;
+    consumablesHtml = `<p class="placeholder-text">No consumables for this build.</p>`;
   } else {
     const rows = consumables.items.map(it => actionRow({
       what: `${escapeHtml(it.label)} × ${fmtInt(it.qty)}`,
       detail: it.detail,
       cost: it.line != null ? it.line : null,
     })).join('');
-    consumablesHtml = `<div class="action-list">${rows}</div>
-      ${consumables.anyMissing ? '<p class="note">Some consumable prices missing — those lines aren\'t in the total.</p>' : ''}`;
+    consumablesHtml = `<div class="action-list">${rows}</div>`;
   }
 
   return `
     <div class="section">
-      <div class="section-label">1. Foundations</div>
-      ${foundationsHtml}
-    </div>
-
-    <div class="section">
-      <div class="section-label">2. Gear to acquire<span class="right">${gearTotal > 0 ? fmtBtc(gearTotal) : (gearNeeds.items.length ? 'no prices' : '—')}</span></div>
+      <div class="section-label">Gear to acquire<span class="right">${(gearNeeds.total || 0) > 0 ? fmtBtc(gearNeeds.total) : (gearNeeds.items.length ? 'no prices' : '—')}</span></div>
       ${gearHtml}
     </div>
-
     <div class="section">
-      <div class="section-label">3. Consumables · ${consumables.days} day${consumables.days > 1 ? 's' : ''}<span class="right">${fmtBtc(consumablesTotal)}</span></div>
+      <div class="section-label">Consumables · ${consumables.days} day${consumables.days > 1 ? 's' : ''}<span class="right">${fmtBtc(consumables.total)}</span></div>
       ${consumablesHtml}
     </div>
-
-    <div class="grand-total">
-      <span>Total to prepare</span>
-      <span class="mono">${fmtBtc(grandTotal)}${gearNeeds.anyMissing ? `<span class="muted-suffix">(some gear prices missing)</span>` : ''}</span>
-    </div>
+    ${gearNeeds.anyMissing || consumables.anyMissing ? `<p class="note">Some market prices unavailable — those lines aren't included in totals.</p>` : ''}
   `;
 }
 
-function dailyDuringWarSection(d, havePrices, params, preset) {
+function renderModelDayBox(daily, params, preset) {
   const inLines = [];
-  if (d.factoriesHaveRevenue) {
-    inLines.push(`<div class="flow-line"><span class="ll">Company revenue</span><span class="lv pos">${fmtSigned(d.factoryRevenue)}</span></div>`);
+  if (daily.factoriesHaveRevenue) {
+    inLines.push(`<div class="flow-line"><span class="ll">Company revenue</span><span class="lv pos">${fmtSigned(daily.factoryRevenue)}</span></div>`);
   } else {
     inLines.push(`<div class="flow-line"><span class="ll">Company revenue</span><span class="lv unk">unavailable</span></div>`);
   }
-  const moneyIn = d.factoriesHaveRevenue ? d.factoryRevenue : 0;
+  if (daily.lootIncome > 0) {
+    inLines.push(`<div class="flow-line"><span class="ll">Loot + missions <span class="qty">(est)</span></span><span class="lv pos">${fmtSigned(daily.lootIncome)}</span></div>`);
+  }
+  const moneyIn = (daily.factoriesHaveRevenue ? daily.factoryRevenue : 0) + (daily.lootIncome || 0);
 
   const outLines = [];
-  if (d.factoriesHaveWage && d.factoryWageCost > 0) {
-    outLines.push(`<div class="flow-line"><span class="ll">Worker wages</span><span class="lv neg">${fmtSigned(-d.factoryWageCost)}</span></div>`);
+  if (daily.factoriesHaveWage && daily.factoryWageCost > 0) {
+    outLines.push(`<div class="flow-line"><span class="ll">Worker wages</span><span class="lv neg">${fmtSigned(-daily.factoryWageCost)}</span></div>`);
   }
-  if (d.factoryIngCost > 0) {
-    outLines.push(`<div class="flow-line"><span class="ll">Ingredient costs</span><span class="lv neg">${fmtSigned(-d.factoryIngCost)}</span></div>`);
+  if (daily.factoryIngCost > 0) {
+    outLines.push(`<div class="flow-line"><span class="ll">Ingredient costs</span><span class="lv neg">${fmtSigned(-daily.factoryIngCost)}</span></div>`);
   }
-  d.consumableLines.forEach(it => {
-    if (it.linePerDay == null && it.line == null) return;
-    const dailyValue = it.line != null ? it.line / Math.max(1, params.warDays) : it.linePerDay;
+  daily.consumableLines.forEach(it => {
+    if (it.line == null) return;
+    const dailyValue = it.line / Math.max(1, params.warDays);
     outLines.push(`<div class="flow-line">
       <span class="ll">${escapeHtml(it.label)}<span class="qty">× ${fmt(it.qty / Math.max(1, params.warDays), 1)}/day</span></span>
       <span class="lv neg">${fmtSigned(-dailyValue)}</span>
     </div>`);
   });
-  const moneyOut = (d.factoriesHaveWage ? d.factoryWageCost : 0)
-                 + (d.factoryIngCost || 0)
-                 + (d.consumablesDaily || 0);
-
-  const wageNoteHtml = d.hasOwnWage
-    ? `<div class="flow-note">
-        <span>Working-for-others wage paused during war</span>
-        <span class="lv unk">peace: ${fmtSigned(d.wageIncomePeace)}/day</span>
-      </div>`
-    : '';
+  const moneyOut = (daily.factoriesHaveWage ? daily.factoryWageCost : 0)
+                 + (daily.factoryIngCost || 0)
+                 + (daily.consumablesDaily || 0);
 
   const netDay = moneyIn - moneyOut;
   const netClass = netDay >= 0 ? 'positive' : 'negative';
-  const burnVsPeace = d.peaceNet - netDay;
-  const burnLabel = burnVsPeace >= 0
-    ? `${fmtBtc(burnVsPeace)}/day worse than peace`
-    : `${fmtBtc(-burnVsPeace)}/day better than peace`;
-
-  const tipRowsArr = [
-    { term: 'Money in', desc: 'Companies keep producing during war — revenue continues.' },
-    { term: 'Money out', desc: 'Worker wages + ingredient costs (factory costs) + your consumables (ammo, food, pills) burned per day.' },
-    { term: 'Paused', desc: 'Working-for-others wage stops because your Energy goes to fighting instead.' },
-    { term: 'Note', desc: 'Doesn\'t count loot sales (cases, scrap) — those add income during war.' },
-  ];
 
   return `
-    <p class="note" style="margin-top: 0;">Bitcoin flow per day while fighting. ${escapeHtml(burnLabel)}. ${infoBtn(tipRowsArr).replace(/^/, '')}</p>
+    <p class="note" style="margin-top: 0;">One typical day during the war. Working-for-others wage pauses while Energy goes to fighting.</p>
     <div class="war-flow">
       <div class="flow-block">
         <h5>Money in</h5>
@@ -2210,12 +2323,76 @@ function dailyDuringWarSection(d, havePrices, params, preset) {
           <span class="lv neg">${fmtSigned(-moneyOut)}</span>
         </div>
       </div>
-      ${wageNoteHtml}
       <div class="flow-net ${netClass}">
-        <span>Net during war</span>
+        <span>Net per day</span>
         <span class="mono">${fmtSigned(netDay)}/day</span>
       </div>
     </div>
+  `;
+}
+
+function renderBottomLineBox(daily, totalToPrepare, params, preset, gearNeeds, consumables) {
+  const days = params.warDays;
+  const warTotal = daily.warNet * days;
+  const peaceTotal = daily.peaceNet * days;
+  const oppCost = peaceTotal - warTotal;
+  const grandSwing = warTotal - totalToPrepare;
+
+  return `
+    <p class="note" style="margin-top: 0;">Full P&L for fighting this war (${days} day${days > 1 ? 's' : ''}) vs staying in peace.</p>
+
+    <div class="bs-grid">
+      <div class="bs-block">
+        <h5>Upfront stockpile</h5>
+        <div class="bs-line">
+          <span class="ll">Gear</span>
+          <span class="lv neg">${fmtSigned(-(gearNeeds.total || 0))}</span>
+        </div>
+        <div class="bs-line">
+          <span class="ll">Consumables</span>
+          <span class="lv neg">${fmtSigned(-(consumables.total || 0))}</span>
+        </div>
+        <div class="bs-line total">
+          <span class="ll">Total upfront</span>
+          <span class="lv neg">${fmtSigned(-totalToPrepare)}</span>
+        </div>
+      </div>
+
+      <div class="bs-block">
+        <h5>Over ${days} day${days > 1 ? 's' : ''} of war</h5>
+        <div class="bs-line">
+          <span class="ll">Per-day net (in war)</span>
+          <span class="lv ${daily.warNet >= 0 ? 'pos' : 'neg'}">${fmtSigned(daily.warNet)}</span>
+        </div>
+        <div class="bs-line">
+          <span class="ll">× ${days} day${days > 1 ? 's' : ''}</span>
+          <span class="lv ${warTotal >= 0 ? 'pos' : 'neg'}">${fmtSigned(warTotal)}</span>
+        </div>
+        <div class="bs-line total">
+          <span class="ll">War operations</span>
+          <span class="lv ${warTotal >= 0 ? 'pos' : 'neg'}">${fmtSigned(warTotal)}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-net ${grandSwing >= 0 ? 'positive' : 'negative'}" style="margin-top: 0.85rem;">
+      <span>Bitcoin swing vs starting position</span>
+      <span class="mono">${fmtSigned(grandSwing)}</span>
+    </div>
+
+    <div class="bs-block" style="margin-top: 0.7rem;">
+      <h5>Comparison</h5>
+      <div class="bs-line">
+        <span class="ll">If you stayed in peace</span>
+        <span class="lv ${peaceTotal >= 0 ? 'pos' : 'neg'}">${fmtSigned(peaceTotal)}</span>
+      </div>
+      <div class="bs-line">
+        <span class="ll">Opportunity cost of fighting</span>
+        <span class="lv neg">${fmtSigned(-oppCost)}</span>
+      </div>
+    </div>
+
+    <p class="note">Numbers ignore: scrap/case drop value beyond the ${fmtBtc(WAR_LOOT_INCOME_PER_DAY)}/day estimate, mission rewards beyond dailies, and any bounties.</p>
   `;
 }
 
@@ -2266,7 +2443,7 @@ if (initialU) {
   $('#username').focus();
 }
 
-if (DEBUG) console.log('Debug mode on. Add ?debug=1 to URL.');
+if (DEBUG) console.log('Debug mode on.');
 </script>
 </body>
 </html>

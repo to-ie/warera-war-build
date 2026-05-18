@@ -2289,7 +2289,7 @@ function renderTargetBuild(p, data) {
     ${boxes}
   `;
 
-  $('#target-content .tab').forEach(btn => {
+  $$('#target-content .tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const newPreset = btn.dataset.preset;
       if (newPreset !== selectedPreset) {

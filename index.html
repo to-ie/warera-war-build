@@ -777,7 +777,7 @@
     <div class="brand">
       <h1>War <span class="accent">Readiness</span></h1>
     </div>
-    <span class="brand sub">build planner for warera.io · v0.10</span>
+    <span class="brand sub">build planner for warera.io · v0.11</span>
   </div>
 </div>
 
@@ -959,7 +959,7 @@ function ammoDamageMult(code) {
   const pct = itemFromCfg(code)?.flatStats?.percentAttack ?? 0;
   return 1 + pct / 100;
 }
-function foodHpMult(code) {
+function foodRegenPctPerEat(code) {
   if (!code || code === 'none') return 0;
   return (itemFromCfg(code)?.flatStats?.healthRegenPercent ?? 0) / 100;
 }
@@ -972,8 +972,25 @@ function aePPForLevel(level) {
   if (!level) return 0;
   return CFG_GAME?.upgradesConfig?.automatedEngine?.levels?.[level]?.stats?.dailyProd ?? 0;
 }
+function maxAeLevel() {
+  const levels = CFG_GAME?.upgradesConfig?.automatedEngine?.levels;
+  if (!levels) return null;
+  const keys = Object.keys(levels).map(Number).sort((a, b) => a - b);
+  return keys[keys.length - 1];
+}
 function dailyMissionMoney() {
   return CFG_GAME?.mission?.reward?.daily?.money ?? 0;
+}
+function weeklyMissionMoney() {
+  return CFG_GAME?.mission?.reward?.weekly?.money ?? 0;
+}
+function monthlyMissionMoney() {
+  return CFG_GAME?.mission?.reward?.monthly?.money ?? 0;
+}
+function avgDailyMissionMoney() {
+  return dailyMissionMoney()
+    + weeklyMissionMoney() / 7
+    + monthlyMissionMoney() / 30;
 }
 function baseHealthCostPerHit() {
   return CFG_GAME?.battle?.healthCost ?? 0;
@@ -987,31 +1004,23 @@ function hpCostPerHit(armorRaw) {
 }
 
 function fidelityProdBonusPct() {
-  const w = CFG_GAME?.worker;
-  if (!w) return 0;
-  const v = w.fidelityProductionBonusPercent
-        ?? w.fidelityProductionBonus
-        ?? w.fidelityBonusPercent
-        ?? w.fidelityBonus
-        ?? null;
-  if (v == null && DEBUG) {
-    console.warn('[fidelityProdBonusPct] no known fidelity key on CFG_GAME.worker. Keys:', Object.keys(w));
+  const v = CFG_GAME?.worker?.fidelityProductionBonusPercent;
+  if (v == null) {
+    throw new Error('fidelityProdBonusPct: gameConfig.worker.fidelityProductionBonusPercent missing');
   }
-  return v ?? 0;
+  return v;
 }
-function fidelityConfigKnown() {
-  const w = CFG_GAME?.worker;
-  if (!w) return false;
-  return w.fidelityProductionBonusPercent != null
-      || w.fidelityProductionBonus != null
-      || w.fidelityBonusPercent != null
-      || w.fidelityBonus != null;
+function maxFidelity() {
+  return CFG_GAME?.worker?.maxFidelity ?? null;
 }
 
 function actionsPerDay(bar) {
   if (!bar || !CFG_GAME) return 0;
-  const regenDiv = CFG_GAME.user?.regenDividedBy ?? 10;
-  const cost = CFG_GAME.user?.energyCostPerAction ?? 10;
+  const regenDiv = CFG_GAME.user?.regenDividedBy;
+  const cost = CFG_GAME.user?.energyCostPerAction;
+  if (regenDiv == null || cost == null) {
+    throw new Error('actionsPerDay: gameConfig.user.regenDividedBy or energyCostPerAction missing');
+  }
   return (bar * 24 / regenDiv) / cost;
 }
 
@@ -1389,6 +1398,7 @@ function extractCompanies(data) {
   const workersByCompany = data.workersByCompanyId || {};
   const workerProfiles = data.workerProfilesByUserId || {};
   const fidBonusPct = fidelityProdBonusPct();
+  const fidCap = maxFidelity();
 
   const marketTax = data.country?.taxes?.market || 0;
   const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
@@ -1411,7 +1421,8 @@ function extractCompanies(data) {
     if (workers.length > 0) {
       let wageSum = 0;
       workers.forEach(w => {
-        const fid = Number(w.fidelity) || 0;
+        const fidRaw = Number(w.fidelity) || 0;
+        const fid = fidCap != null ? Math.min(fidRaw, fidCap) : fidRaw;
         const wage = Number(w.wage) || 0;
         const profile = workerProfiles[w.user];
         const wEnergy = profile?.skills?.energy?.total ?? profile?.skills?.energy?.value ?? 0;
@@ -1424,7 +1435,7 @@ function extractCompanies(data) {
         wageSum += dailyWage;
         if (!profile) workersIncomplete = true;
         workerDetails.push({
-          userId: w.user, fidelity: fid, wage, dailyWage, pp,
+          userId: w.user, fidelity: fidRaw, fidelityCapped: fid, wage, dailyWage, pp,
           energy: wEnergy, production: wProd, actionsPerDay: actsPerDay,
           hasProfile: !!profile,
         });
@@ -1489,15 +1500,22 @@ function buildLabel(player) {
   return                       { label: 'Hybrid build', sub: `${fp}% fight / ${ep}% eco` };
 }
 
-function effectiveHitsPerDay(player, params) {
+function effectiveHitsPerDay(player, params, preset = null) {
   if (params.hitsPerDay != null && !isNaN(params.hitsPerDay) && params.hitsPerDay >= 0) {
     return params.hitsPerDay;
   }
   const energyCeiling = actionsPerDay(player.eco.energy);
   const hpPerHit = hpCostPerHit(player.derived.armRaw);
-  const hp = player.derived.hp;
-  if (!hpPerHit || !hp) return Math.round(energyCeiling);
-  const hpCeiling = hp / hpPerHit;
+  const baseHp = player.derived.hp;
+  if (!hpPerHit || !baseHp) return Math.round(energyCeiling);
+
+  let effectiveHp = baseHp;
+  if (preset?.buffs?.food) {
+    const foodPct = foodRegenPctPerEat(CONSUMABLES[preset.buffs.food]?.code);
+    const hunger = player.derived.hunger || 0;
+    effectiveHp += foodPct * baseHp * hunger;
+  }
+  const hpCeiling = effectiveHp / hpPerHit;
   return Math.round(Math.min(energyCeiling, hpCeiling));
 }
 
@@ -1505,7 +1523,9 @@ function computeFoundations(player, comps, preset) {
   const items = [];
   const f = preset.foundations || {};
   const minCo = f.minCompanies ?? 0;
-  const minAe = f.minAe ?? 0;
+  const maxAe = maxAeLevel();
+  const minAe = Math.min(f.minAe ?? 0, maxAe ?? Infinity);
+  const aeCappedByGame = (f.minAe ?? 0) > (maxAe ?? Infinity);
 
   const slotShortfall = minCo - player.eco.companies;
   if (slotShortfall > 0) {
@@ -1550,7 +1570,11 @@ function computeFoundations(player, comps, preset) {
       cost: 'none', tone: 'warn',
     });
   }
-  return { items, note: f.note || '', minCompanies: minCo, minAe };
+  let note = f.note || '';
+  if (aeCappedByGame) {
+    note += ` (Preset asked for AE ${f.minAe} but the game caps AE at ${maxAe} — clamped.)`;
+  }
+  return { items, note, minCompanies: minCo, minAe };
 }
 
 function computeGearNeeds(eq, preset, prices, params) {
@@ -1631,7 +1655,7 @@ function computeConsumables(preset, prices, player, params) {
       push(CONSUMABLES.pill, preset.pillsTotal, `${preset.pillsTotal} total per push (≈ 1 per pill day)`);
     }
   } else {
-    const hitsPerDay = effectiveHitsPerDay(player, params);
+    const hitsPerDay = effectiveHitsPerDay(player, params, preset);
     const totalHits = hitsPerDay * days;
     const hunger = player?.derived?.hunger;
     push(CONSUMABLES[preset.buffs.ammo], totalHits, `1 per hit × ${fmt(hitsPerDay, 1)} hits/day × ${days} days`);
@@ -1644,7 +1668,7 @@ function computeConsumables(preset, prices, player, params) {
   return { items: out, total, days, anyMissing };
 }
 
-function computeTargetStats(preset, militaryRankPercent = 0, battleBonusPctArg = 0) {
+function computeTargetStats(preset, militaryRankPercent = 0, battleBonusPctArg = 0, hungerLevel = 0) {
   const g = preset.gear, b = preset.buffs;
 
   const weaponAtk  = gearStatMid(itemCode('weapon', g.weapon), 'attack');
@@ -1657,7 +1681,7 @@ function computeTargetStats(preset, militaryRankPercent = 0, battleBonusPctArg =
 
   const pillMult = b.pill ? pillDamageMult() : 1;
   const ammoMult = ammoDamageMult(CONSUMABLES[b.ammo]?.code);
-  const foodHp   = foodHpMult(CONSUMABLES[b.food]?.code);
+  const foodPct  = foodRegenPctPerEat(CONSUMABLES[b.food]?.code);
   const rankMult = 1 + militaryRankPercent / 100;
   const bonusMult = 1 + (battleBonusPctArg || 0) / 100;
 
@@ -1676,6 +1700,8 @@ function computeTargetStats(preset, militaryRankPercent = 0, battleBonusPctArg =
 
   const armRaw = chestArm + pantsArm;
   const ddgRaw = bootsDdg;
+  const hpRegenFromFood = foodPct * baseHp * (hungerLevel || 0);
+  const effectiveHp = baseHp + hpRegenFromFood;
 
   return {
     atk: (baseAtk + weaponAtk) * ammoMult * pillMult * rankMult * bonusMult,
@@ -1684,7 +1710,10 @@ function computeTargetStats(preset, militaryRankPercent = 0, battleBonusPctArg =
     cd:  baseCD + helmetCD,
     armRaw, arm: armRaw / (armRaw + armSoft) * 100,
     ddgRaw, ddg: ddgRaw / (ddgRaw + ddgSoft) * 100,
-    hp:  baseHp * (1 + foodHp),
+    hp:  baseHp,
+    hpWithFood: effectiveHp,
+    foodPctPerEat: foodPct,
+    hungerUses: hungerLevel,
   };
 }
 
@@ -1706,7 +1735,10 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
   const wageMod = (1 - incomeTax / 100);
   const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace * playerProd * wageMod : null;
 
-  const missionIncome = dailyMissionMoney();
+  const missionDaily = dailyMissionMoney();
+  const missionWeeklyAvg = weeklyMissionMoney() / 7;
+  const missionMonthlyAvg = monthlyMissionMoney() / 30;
+  const missionIncome = missionDaily + missionWeeklyAvg + missionMonthlyAvg;
 
   const peaceNet = (wageIncomePeace ?? 0) + factoryNet;
   const warNet   = factoryNet + missionIncome - consumablesDaily;
@@ -1717,6 +1749,7 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
     factoriesHaveRevenue, factoriesHaveWage,
     ownWage, workActionsPeace, wageIncomePeace,
     missionIncome,
+    missionDaily, missionWeeklyAvg, missionMonthlyAvg,
     peaceNet, warNet,
     consumableLines: consumables?.items || [],
   };
@@ -1734,9 +1767,6 @@ function renderPlayer(data) {
   if (!data.user) {
     setStatus('error', `Could not load user. ${data.userError || ''}`);
     return;
-  }
-  if (DEBUG && !fidelityConfigKnown()) {
-    console.warn('[war-readiness] fidelity production bonus key not found in gameConfig.worker — worker PP will not include the fidelity uplift. Worker keys:', Object.keys(CFG_GAME?.worker || {}));
   }
   const p = extractPlayer(data);
   cached.player = p;
@@ -1940,10 +1970,13 @@ function renderDamageBody(p, eq) {
   const d = p.derived;
   const hitsPerDay = actionsPerDay(p.eco.energy);
   const hpPerHit = hpCostPerHit(d.armRaw);
-  const hitsBefore = hpPerHit ? Math.floor(d.hp / hpPerHit) : '–';
+  const hitsNoFood = hpPerHit ? Math.floor(d.hp / hpPerHit) : null;
   const rankPct = p.militaryRankPercent || 0;
   const expDmg = expectedDamagePerHit(d, rankPct, battleBonusPct);
   const baseDmgNoBonus = expectedDamagePerHit(d, rankPct, 0);
+  const hitsLabel = hitsNoFood != null
+    ? `${hitsNoFood} hits on base HP (no food)`
+    : '–';
   return `
     <div class="stats">
       <div class="stat"><span class="stat-label">Attack</span><span class="stat-value">${fmtInt(d.atk)}</span></div>
@@ -1975,7 +2008,7 @@ function renderDamageBody(p, eq) {
       </div>
     </div>
     <div class="section">
-      <div class="section-label">Equipped gear<span class="right">${fmt(hitsPerDay, 1)} hits/day · ${hitsBefore} hits before regen</span></div>
+      <div class="section-label">Equipped gear<span class="right">${fmt(hitsPerDay, 1)} hits/day · ${hitsLabel}</span></div>
       ${equipmentTable(eq)}
     </div>
   `;
@@ -2231,7 +2264,7 @@ function renderTargetBuild(p, data) {
     };
   }
 
-  const target = computeTargetStats(preset, p.militaryRankPercent, battleBonusPct);
+  const target = computeTargetStats(preset, p.militaryRankPercent, battleBonusPct, p.derived.hunger);
   const eq = extractEquipment(data.inventory);
   const comps = extractCompanies(data);
   const foundations = computeFoundations(p, comps, preset);
@@ -2289,7 +2322,7 @@ function renderTargetBuild(p, data) {
     ${boxes}
   `;
 
-  $$('#target-content .tab').forEach(btn => {
+  $('#target-content .tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const newPreset = btn.dataset.preset;
       if (newPreset !== selectedPreset) {
@@ -2573,7 +2606,11 @@ function renderModelDayBox(daily, params, preset) {
     inLines.push(`<div class="flow-line"><span class="ll">Company revenue</span><span class="lv unk">unavailable</span></div>`);
   }
   if (daily.missionIncome > 0) {
-    inLines.push(`<div class="flow-line"><span class="ll">Daily mission <span class="qty">(complete daily)</span></span><span class="lv pos">${fmtSigned(daily.missionIncome)}</span></div>`);
+    const parts = [];
+    if (daily.missionDaily) parts.push(`daily ${fmtBtc(daily.missionDaily)}`);
+    if (daily.missionWeeklyAvg) parts.push(`weekly ${fmtBtc(weeklyMissionMoney())}/7d`);
+    if (daily.missionMonthlyAvg) parts.push(`monthly ${fmtBtc(monthlyMissionMoney())}/30d`);
+    inLines.push(`<div class="flow-line"><span class="ll">Missions <span class="qty">(${parts.join(' + ')})</span></span><span class="lv pos">${fmtSigned(daily.missionIncome)}</span></div>`);
   }
   const moneyIn = (daily.factoriesHaveRevenue ? daily.factoryRevenue : 0) + (daily.missionIncome || 0);
 
@@ -2739,4 +2776,4 @@ if (initialU) {
 if (DEBUG) console.log('Debug mode on.');
 </script>
 </body>
-</html>
+</html> 

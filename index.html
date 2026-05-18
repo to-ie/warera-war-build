@@ -1947,39 +1947,53 @@ function renderCurrentState(p, data) {
     )}
   `;
 
-  // Wire the battle-bonus knob (rendered inside the Damage card body).
-  // Wire the battle-bonus knob (rendered inside the Damage card body).
+  // Wire the battle-bonus knob. We patch numbers in place rather than
+  // re-rendering — that way the input keeps focus naturally, no listener
+  // leaks across re-renders, and the URL doesn't get clobbered.
   const bbInput = $('#battle-bonus-input');
   if (bbInput) {
-    const apply = () => {
+    bbInput.addEventListener('input', () => {
       const v = parseFloat(bbInput.value);
       battleBonusPct = isNaN(v) || v < 0 ? 0 : v;
-      // Persist in URL so the value sticks across reloads of the same player.
+
+      // Persist in URL — but keep `u` as-is so we never re-resolve the user.
       const qs = new URLSearchParams(location.search);
       if (battleBonusPct > 0) qs.set('bb', String(battleBonusPct));
       else qs.delete('bb');
-      history.replaceState(null, '', '?' + qs.toString());
-      // Re-render. Capture which compact-cards are open so they stay open
-      // after the innerHTML wipe.
-      const openIds = $$('#state-content details.compact-card[open]')
-        .map(el => el.dataset.card);
-      renderCurrentState(p, data);
-      // Re-open the cards that were open, and re-focus the input.
-      openIds.forEach(id => {
-        const el = document.querySelector(`#state-content details.compact-card[data-card="${id}"]`);
-        if (el) el.open = true;
-      });
-      const refocused = $('#battle-bonus-input');
-      if (refocused) {
-        refocused.focus();
-        // Put cursor at end so typing continues where you left off.
-        const len = refocused.value.length;
-        refocused.setSelectionRange(len, len);
+      history.replaceState(null, '', location.pathname + '?' + qs.toString());
+
+      // Recompute the three places battle bonus shows up:
+      //   1) Damage card collapsed header pill ("3.2K dmg/day")
+      //   2) Expected damage / hit value
+      //   3) "(X without bonuses)" companion text
+      const hitsPerDay = actionsPerDay(p.eco.energy);
+      const rankPct = p.militaryRankPercent || 0;
+      const expDmg = expectedDamagePerHit(p.derived, rankPct, battleBonusPct);
+      const expDmgNoBonus = expectedDamagePerHit(p.derived, rankPct, 0);
+      const dmgPerDay = expDmg * hitsPerDay;
+
+      // 1) Header pill — locate the dmg/day pill inside the Damage card.
+      const damageCard = document.querySelector('#state-content details.compact-card[data-card="damage"]');
+      if (damageCard) {
+        const pill = damageCard.querySelector('summary .cc-pill');
+        if (pill) pill.textContent = `${fmtCompact(dmgPerDay)} dmg/day`;
       }
-    };
-    // `input` fires on every keystroke; `change` only fires on blur/Enter,
-    // which makes the page feel dead while you're typing.
-    bbInput.addEventListener('input', apply);
+
+      // 2) Expected dmg readout — the .right span inside the section-label
+      //    that contains the "Expected damage / hit" text.
+      const expRight = document.querySelector('#state-content .cc-body .section-label .right');
+      // The first .section-label .right inside the Damage card belongs to
+      // the Expected damage block; second is the Equipped gear hits-per-day.
+      // Walk explicitly to disambiguate.
+      if (damageCard) {
+        const labels = damageCard.querySelectorAll('.section-label .right');
+        if (labels[0]) {
+          labels[0].innerHTML = `${fmtInt(expDmg)} dmg${battleBonusPct > 0
+            ? ` <span style="color: var(--dimmer); font-weight: 400;">(${fmtInt(expDmgNoBonus)} without bonuses)</span>`
+            : ''}`;
+        }
+      }
+    });
     // Stop clicks inside the input from collapsing the parent <details>.
     bbInput.addEventListener('click', e => e.stopPropagation());
   }

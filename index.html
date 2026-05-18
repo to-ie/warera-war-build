@@ -784,7 +784,7 @@
     <div class="brand">
       <h1>War <span class="accent">Readiness</span></h1>
     </div>
-    <span class="brand sub">build planner for warera.io · v0.9</span>
+    <span class="brand sub">build planner for warera.io · v0.10</span>
   </div>
 </div>
 
@@ -827,7 +827,7 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════
- *  CONFIG
+ *  CONFIG (app)
  * ═══════════════════════════════════════════════════════════════════ */
 const CFG = {
   API: 'https://warera-proxy.toie.workers.dev/trpc',
@@ -835,6 +835,13 @@ const CFG = {
 };
 const QS = new URLSearchParams(location.search);
 const DEBUG = QS.has('debug');
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  RUNTIME STATE — populated each load from gameConfig.getGameConfig
+ *  No game balance numbers are hardcoded anywhere below; everything
+ *  derives from CFG_GAME. If it fails to load, we refuse to render.
+ * ═══════════════════════════════════════════════════════════════════ */
+let CFG_GAME = null;
 
 /* ═══════════════════════════════════════════════════════════════════
  *  UTILITIES
@@ -870,13 +877,30 @@ function fmtCompact(n) {
   if (abs >= 1e3) return (n / 1e3).toFixed(1) + 'K';
   return Math.round(n).toLocaleString();
 }
-function expectedDamagePerHit(d) {
+// Expected damage on a single hit, accounting for precision (miss chance),
+// crit chance, crit damage, military rank, and current battle bonuses.
+//
+// The base attack value `d.atk` from the user payload already includes the
+// player's skill-attack stat + weapon attack + pill + ammo, but does NOT
+// include military rank or live battle bonuses. Those layer on top here.
+//
+// Formula (verified against two roundDamages.hit payloads, hits 234 & 231):
+//   damage = atk × (1 + rank%) × (1 + battleBonus%)
+//          × [precision × ((1 − cc) + cc × (1 + cd%)) + (1 − precision) × 0.5]
+//
+// The miss multiplier 0.5 is still the "half damage on miss" tooltip rule —
+// not config-confirmed. Crit multiplier 1 + cd/100 is config-confirmed
+// (criticalDamages.value semantics).
+function expectedDamagePerHit(d, rankPct = 0, battleBonusPct = 0) {
   const atk = d.atk || 0;
   const prc = (d.prc || 0) / 100;
   const cc  = (d.cc  || 0) / 100;
   const cdMult = 1 + (d.cd || 0) / 100;
-  const landed = prc * ((1 - cc) * atk + cc * atk * cdMult);
-  const missed = (1 - prc) * atk * 0.5;
+  const rankMult = 1 + (rankPct || 0) / 100;
+  const bonusMult = 1 + (battleBonusPct || 0) / 100;
+  const baseAtk = atk * rankMult * bonusMult;
+  const landed = prc * ((1 - cc) * baseAtk + cc * baseAtk * cdMult);
+  const missed = (1 - prc) * baseAtk * 0.5;
   return landed + missed;
 }
 function flag(code) {
@@ -936,21 +960,119 @@ async function trpc(endpoint, params = {}) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- *  GAME CONSTANTS
+ *  CONFIG ACCESSORS — every game number reads through one of these.
+ *  No fallbacks: if config is missing, render is blocked upstream.
  * ═══════════════════════════════════════════════════════════════════ */
-const ECO_BASE = { energy: 30, entrepreneurship: 30, production: 10, companies: 2, management: 4 };
-const ECO_GAIN = { energy: 10, entrepreneurship: 5, production: 3, companies: 1, management: 2 };
-// Fight skill base values and per-level gains, derived from in-game screenshots:
-//   Lvl 22 (Atk lvl 5): Atk 225, Prec 70, CC 25, CD 160, Arm 24, Ddg 16, HP 140, Loot 9, Hunger 7
-//   Lvl 30 (Atk lvl 7): Atk 275, Prec 75, CC 30, CD 180, Arm 24, Ddg 20, HP 140, Loot 11, Hunger 7
-const FIGHT_BASE = {
-  attack: 100, precision: 50, criticalChance: 10, criticalDamages: 100,
-  armor: 0,    dodge: 0,      health: 100,        lootChance: 5,        hunger: 4,
-};
-const FIGHT_GAIN = {
-  attack: 25,  precision: 5,  criticalChance: 5,  criticalDamages: 20,
-  armor: 6,    dodge: 4,      health: 10,         lootChance: 2,        hunger: 1,
-};
+
+// Skill value at a given level (e.g. attack level 5 → 225).
+function skillValueAt(name, level) {
+  const lv = CFG_GAME?.skills?.[name]?.levels?.[level];
+  return lv?.value ?? null;
+}
+// SP cost to reach a given level of a given skill (cumulative).
+function skillTotalCost(name, level) {
+  const lv = CFG_GAME?.skills?.[name]?.levels?.[level];
+  return lv?.totalCost ?? 0;
+}
+// Skill soft cap (armor/dodge): displayedPct = raw / (raw + softCap) × 100
+function skillSoftCap(name) {
+  return CFG_GAME?.skills?.[name]?.softCap ?? null;
+}
+// Sum of SP spent across a list of skill keys, using config's totalCost.
+function pointsSpentFromCfg(levels, keys) {
+  return keys.reduce((s, k) => s + skillTotalCost(k, levels[k] || 0), 0);
+}
+
+// Item helpers — every recipe, buff, and gear stat sources from here.
+function itemFromCfg(code) {
+  return CFG_GAME?.items?.[code] || null;
+}
+// PP consumed per output unit (e.g. cocain = 200, lightAmmo = 1, livestock = 20)
+function ppPerOutput(code) {
+  return itemFromCfg(code)?.productionPoints ?? 1;
+}
+// Ingredient qty map per output unit (e.g. cocain → {coca: 200})
+function ingredientsFor(code) {
+  return itemFromCfg(code)?.productionNeeds || {};
+}
+// True if the item consumes ingredients (steel, cocain, ammo etc).
+function isItemProcessed(code) {
+  return Object.keys(ingredientsFor(code)).length > 0;
+}
+// Damage multiplier from one pill (cocain). flatStats.percentAttack = 60 → 1.60×
+function pillDamageMult() {
+  const pct = itemFromCfg('cocain')?.flatStats?.percentAttack ?? 0;
+  return 1 + pct / 100;
+}
+// Damage multiplier from an ammo type code.
+function ammoDamageMult(code) {
+  if (!code || code === 'none') return 1;
+  const pct = itemFromCfg(code)?.flatStats?.percentAttack ?? 0;
+  return 1 + pct / 100;
+}
+// Health regen percent from a food code (bread/steak/cookedFish).
+// Game tooltip: "healthRegenPercent" — kept as a max-HP fraction in the
+// target-stat preview here, same convention as v0.9. Verifying the exact
+// in-battle behaviour is a separate to-do.
+function foodHpMult(code) {
+  if (!code || code === 'none') return 0;
+  return (itemFromCfg(code)?.flatStats?.healthRegenPercent ?? 0) / 100;
+}
+// Gear stat midpoint from dynamicStats range.
+function gearStatMid(code, statKey) {
+  const range = itemFromCfg(code)?.dynamicStats?.[statKey];
+  if (!Array.isArray(range)) return 0;
+  return (range[0] + range[1]) / 2;
+}
+// Daily PP from an Automated Engine at a given level.
+function aePPForLevel(level) {
+  if (!level) return 0;
+  return CFG_GAME?.upgradesConfig?.automatedEngine?.levels?.[level]?.stats?.dailyProd ?? 0;
+}
+// Max workers from a Break Room level (used for sanity checks only).
+function brMaxWorkers(level) {
+  if (!level) return 0;
+  return CFG_GAME?.upgradesConfig?.breakRoom?.levels?.[level]?.stats?.maxWorkers ?? 0;
+}
+// Bitcoin from completing the daily mission (10 ₿ in current config).
+function dailyMissionMoney() {
+  return CFG_GAME?.mission?.reward?.daily?.money ?? 0;
+}
+// Base HP cost paid by the attacker per hit, before armor reduction.
+// Verified against two roundDamages.hit payloads: healthConsumed 8.7 with
+// raw armor 6 and soft cap 40 → 10 × (1 − 6/46) = 8.6957 ≈ 8.7. ✓
+function baseHealthCostPerHit() {
+  return CFG_GAME?.battle?.healthCost ?? 0;
+}
+// Actual HP burned per hit after the attacker's armor reduction.
+// armor% is the soft-capped display value: raw / (raw + softCap).
+function hpCostPerHit(armorRaw) {
+  const base = baseHealthCostPerHit();
+  const soft = skillSoftCap('armor');
+  if (!base || !soft) return base;
+  const armorPct = armorRaw / (armorRaw + soft);
+  return base * (1 - armorPct);
+}
+
+// Fidelity-to-production conversion (each fid point = +1% per the config).
+function fidelityProdBonusPct() {
+  return CFG_GAME?.worker?.fidelityProductionBonusPercent ?? 0;
+}
+
+// Bar regen: total energy/entrepreneurship pool available per day,
+// divided by per-action cost. Per config: bar regens at bar/regenDividedBy
+// each hour → bar × (24 / regenDividedBy) per day. Break Room does NOT
+// affect this; it only governs maxWorkers and dailyHires.
+function actionsPerDay(bar) {
+  if (!bar || !CFG_GAME) return 0;
+  const regenDiv = CFG_GAME.user?.regenDividedBy ?? 10;
+  const cost = CFG_GAME.user?.energyCostPerAction ?? 10;
+  return (bar * 24 / regenDiv) / cost;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  STATIC LABEL/UI CONSTANTS — not game numbers.
+ * ═══════════════════════════════════════════════════════════════════ */
 const SKILL_LABELS = {
   attack: 'Attack', precision: 'Precision', criticalChance: 'Crit chance',
   criticalDamages: 'Crit damage', armor: 'Armor', dodge: 'Dodge',
@@ -961,51 +1083,13 @@ const SKILL_LABELS = {
 const FIGHT_KEYS = ['attack','precision','criticalChance','criticalDamages','armor','dodge','health','lootChance','hunger'];
 const ECO_KEYS = ['energy','entrepreneurship','production','companies','management'];
 
-// Project skill levels forward by applying the plan's +1 increments from
-// each level up to viewLevel. Skills not mentioned by the plan stay at
-// their current values.
-function projectSkillsAtLevel(currentLevels, plan, viewLevel) {
-  const projected = { ...currentLevels };
-  if (plan) {
-    plan.forEach(step => {
-      if (step.skill && step.level <= viewLevel) {
-        projected[step.skill] = (projected[step.skill] || 0) + 1;
-      }
-    });
-  }
-  return projected;
-}
-
-// Value (base + skill bonus) for a skill at a given level — independent of
-// gear/buffs. Use this to project the "raw skill value" without modifiers.
-function skillValueAt(name, level) {
-  if (FIGHT_BASE[name] !== undefined) return FIGHT_BASE[name] + (FIGHT_GAIN[name] || 0) * (level || 0);
-  if (ECO_BASE[name]   !== undefined) return ECO_BASE[name]   + (ECO_GAIN[name]   || 0) * (level || 0);
-  return null;
-}
-
-function pointsForLevel(level) { return (level * (level + 1)) / 2; }
-function pointsSpent(levels, keys) {
-  return keys.reduce((s, k) => s + pointsForLevel(levels[k] || 0), 0);
-}
-function companiesSkillLevelForMax(maxTarget) {
-  return Math.max(0, maxTarget - ECO_BASE.companies);
-}
-
-const GEAR_STATS = {
-  common:    { weapon: { attack: [21,40],   crit: [1,5] },   helmet: { critDamage: [1,15] },    chest: { armor: [1,5] },   pants: { armor: [1,5] },   boots: { dodge: [1,5] },   gloves: { precision: [1,5] } },
-  uncommon:  { weapon: { attack: [51,60],   crit: [6,10] },  helmet: { critDamage: [16,30] },   chest: { armor: [6,10] },  pants: { armor: [6,10] },  boots: { dodge: [6,10] },  gloves: { precision: [6,10] } },
-  rare:      { weapon: { attack: [71,90],   crit: [11,15] }, helmet: { critDamage: [31,50] },   chest: { armor: [11,15] }, pants: { armor: [11,15] }, boots: { dodge: [11,15] }, gloves: { precision: [11,15] } },
-  epic:      { weapon: { attack: [101,130], crit: [16,20] }, helmet: { critDamage: [71,90] },   chest: { armor: [21,30] }, pants: { armor: [21,30] }, boots: { dodge: [21,25] }, gloves: { precision: [21,25] } },
-  legendary: { weapon: { attack: [141,170], crit: [26,35] }, helmet: { critDamage: [91,110] },  chest: { armor: [36,50] }, pants: { armor: [36,50] }, boots: { dodge: [31,40] }, gloves: { precision: [31,40] } },
-  mythic:    { weapon: { attack: [221,300], crit: [41,50] }, helmet: { critDamage: [121,150] }, chest: { armor: [56,70] }, pants: { armor: [56,70] }, boots: { dodge: [51,60] }, gloves: { precision: [51,60] } },
-};
-
 const RARITY_BY_INDEX = ['', 'common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic' };
 const SLOT_LABEL = { weapon: 'Weapon', helmet: 'Helmet', chest: 'Chest', pants: 'Pants', boots: 'Boots', gloves: 'Gloves' };
-const WEAPON_BY_RARITY = { common: 'knife', uncommon: 'gun', rare: 'rifle', epic: 'sniper', legendary: 'tank', mythic: 'fighterJet' };
-const WEAPON_DISPLAY = { knife: 'Knife', gun: 'Gun', rifle: 'Rifle', sniper: 'Sniper', tank: 'Tank', fighterJet: 'Fighter Jet' };
+// Map gear slot+rarity → item code. The "weapon" slot is special — weapons
+// have their own codes (knife/gun/rifle/...) rather than weaponN.
+const WEAPON_BY_RARITY = { common: 'knife', uncommon: 'gun', rare: 'rifle', epic: 'sniper', legendary: 'tank', mythic: 'jet' };
+const WEAPON_DISPLAY = { knife: 'Knife', gun: 'Gun', rifle: 'Rifle', sniper: 'Sniper', tank: 'Tank', jet: 'Fighter Jet' };
 
 function itemCode(slot, rarity) {
   if (slot === 'weapon') return WEAPON_BY_RARITY[rarity];
@@ -1024,70 +1108,73 @@ function gearItemName(slot, rarity) {
   return SLOT_LABEL[slot] || slot;
 }
 
-const BUFFS = {
-  pill:  { damageMult: 1.60 },
-  ammo:  { none: 1.00, light: 1.10, ammo: 1.20, heavy: 1.40 },
-  food:  { none: 0,    bread: 0.10, steak: 0.15, fish: 0.20 },
-};
+// Consumable codes — internal codes follow the game's naming.
+// Two important corrections from v0.9: the pill item is `cocain` (not
+// `pill`, which doesn't exist), and the food item is `cookedFish` (not
+// raw `fish`, which is the deposit material).
 const CONSUMABLES = {
-  pill:  { code: 'pill',      label: 'Pill',       kind: 'pill'  },
-  light: { code: 'lightAmmo', label: 'Light Ammo', kind: 'ammo'  },
-  ammo:  { code: 'ammo',      label: 'Medium Ammo',kind: 'ammo'  },
-  heavy: { code: 'heavyAmmo', label: 'Heavy Ammo', kind: 'ammo'  },
-  bread: { code: 'bread',     label: 'Bread',      kind: 'food'  },
-  steak: { code: 'steak',     label: 'Steak',      kind: 'food'  },
-  fish:  { code: 'fish',      label: 'Salmon',     kind: 'food'  },
+  pill:  { code: 'cocain',     label: 'Pill',        kind: 'pill'  },
+  light: { code: 'lightAmmo',  label: 'Light Ammo',  kind: 'ammo'  },
+  ammo:  { code: 'ammo',       label: 'Medium Ammo', kind: 'ammo'  },
+  heavy: { code: 'heavyAmmo',  label: 'Heavy Ammo',  kind: 'ammo'  },
+  bread: { code: 'bread',      label: 'Bread',       kind: 'food'  },
+  steak: { code: 'steak',      label: 'Steak',       kind: 'food'  },
+  fish:  { code: 'cookedFish', label: 'Cooked Fish',      kind: 'food'  },
 };
 
-const AE_TABLE = { 0: 0, 1: 24, 2: 48, 3: 72, 4: 96, 5: 120, 6: 144, 7: 168, 8: 192, 9: 216, 10: 240 };
+const COMBAT_STAT_DESCRIPTIONS = [
+  { term: 'Attack', desc: 'The base value for Damages calculation.' },
+  { term: 'Precision', desc: 'Chance to hit. Misses cannot crit and deal half damage.' },
+  { term: 'Crit chance', desc: 'Probability of landing a critical hit.' },
+  { term: 'Crit damages', desc: 'Damage factor increase of critical hits over normal hits.' },
+  { term: 'Armor', desc: 'Reduces health lost when fighting.' },
+  { term: 'Dodge', desc: 'Chance to dodge all incoming damage. Dodging also prevents equipment durability loss.' },
+  { term: 'Health', desc: 'Consumed when fighting in battles.' },
+  { term: 'Loot chance', desc: 'Chance per hit to instantly loot. 1% gives 1% PP loot and 0.01% case loot per hit.' },
+  { term: 'Hunger', desc: 'Limit of food consumption per battle.' },
+];
+const ECONOMY_STAT_DESCRIPTIONS = [
+  { term: 'Energy', desc: 'Used to Work or fight. Fills your daily action pool.' },
+  { term: 'Entrepreneurship', desc: 'Used to Self Work in your own companies. Separate pool, parallel to Energy.' },
+  { term: 'Production', desc: 'Production Points generated per work action.' },
+  { term: 'Companies', desc: 'Max companies you can own.' },
+  { term: 'Management', desc: 'Max workers you can manage + daily hire limit.' },
+];
 
-/* RECIPES — verified from in-game UI screenshots.
-   `ppPer` = PP consumed per output unit. `ingredients` = qty per output unit.
-   Items with empty ingredients are raw materials (1 PP → 1 unit). */
-const RECIPES = {
-  // Raw materials
-  iron:            { ppPer: 1,  ingredients: {} },
-  limestone:       { ppPer: 1,  ingredients: {} },
-  lead:            { ppPer: 1,  ingredients: {} },
-  petroleum:       { ppPer: 1,  ingredients: {} },
-  grain:           { ppPer: 1,  ingredients: {} },
-  livestock:       { ppPer: 1,  ingredients: {} },
-  fish:            { ppPer: 1,  ingredients: {} },
-  mysteriousPlant: { ppPer: 1,  ingredients: {} },
+// Skill helpers — companies skill level 0 gives 2 max companies, +1 per
+// level. Read from config so it adjusts if the table ever changes.
+function companiesSkillLevelForMax(maxTarget) {
+  // Walk the levels table and find the lowest level whose value ≥ target.
+  const levels = CFG_GAME?.skills?.companies?.levels || {};
+  for (let i = 0; i <= 10; i++) {
+    if ((levels[i]?.value ?? 0) >= maxTarget) return i;
+  }
+  return 10;
+}
 
-  // Processed — all verified from in-game tooltips
-  oil:        { ppPer: 1,   ingredients: { petroleum: 1 } },
-  steel:      { ppPer: 10,  ingredients: { iron: 10 } },
-  concrete:   { ppPer: 10,  ingredients: { limestone: 10 } },
-  bread:      { ppPer: 10,  ingredients: { grain: 10 } },
-  steak:      { ppPer: 20,  ingredients: { livestock: 1 } },
-  cookedFish: { ppPer: 40,  ingredients: { fish: 1 } },
-  // All ammo uses LEAD (the gray ingot icon in-game is lead, not steel)
-  lightAmmo:  { ppPer: 1,   ingredients: { lead: 1 } },
-  ammo:       { ppPer: 4,   ingredients: { lead: 4 } },
-  heavyAmmo:  { ppPer: 16,  ingredients: { lead: 16 } },
-  pill:       { ppPer: 200, ingredients: { mysteriousPlant: 200 } },
-};
+// Project skill levels forward by applying plan's +1 increments up to viewLevel.
+function projectSkillsAtLevel(currentLevels, plan, viewLevel) {
+  const projected = { ...currentLevels };
+  if (plan) {
+    plan.forEach(step => {
+      if (step.skill && step.level <= viewLevel) {
+        projected[step.skill] = (projected[step.skill] || 0) + 1;
+      }
+    });
+  }
+  return projected;
+}
 
-const FACTORY_ASSUMPTIONS = {
-  workerActionsPerDay: 24,
-  // PP a worker generates per action. Real workers vary (newbies ~15,
-  // veterans ~30). 25 is a rough average derived from observed transactions.
-  workerProduction: 25,
-  outputCalibration: 1.0,
-};
-
-/* Estimated extra income during war from completing daily missions and
-   selling case/scrap drops. Pulled from guide ("+101.5g/day from missions
-   + cases/scrap"). Exposed as a constant so we can tune or show provenance. */
-const WAR_LOOT_INCOME_PER_DAY = 101.5;
-
+/* ═══════════════════════════════════════════════════════════════════
+ *  PRESETS — gear/consumable specs (still hand-curated from guides;
+ *  the math that consumes them is config-driven below).
+ * ═══════════════════════════════════════════════════════════════════ */
 const PRESETS = {
   basic: {
     name: 'War Basic',
     sub: 'Sustainable · Rare gear, no pill',
     tagline: 'Sells loot + scrap to self-fund. Default for any war (including pill-debuff windows).',
-    outcome: '~180k dmg/day (Rare weapon) or ~220k/day (Epic). Bitcoin-positive day-to-day. Assumes 50% battle bonus.',
+    outcome: 'Aims for sustained damage from Rare/Epic gear. Bitcoin-positive day-to-day if foundations are met.',
     gear: { weapon: 'rare', helmet: 'rare', chest: 'rare', pants: 'rare', boots: 'rare', gloves: 'rare' },
     buffs: { pill: false, ammo: 'light', food: 'steak' },
     foundations: {
@@ -1117,7 +1204,7 @@ const PRESETS = {
     name: 'War High-Damage',
     sub: 'Pill push · Tank/Sniper + Legendary boots + Epic',
     tagline: 'Stockpile for a 2-day pill push. Pop pill on full HP + hunger for max impact.',
-    outcome: '~1M dmg/pill day (assumes 50% battle bonus). Stockpile cost ~2.5K ₿ — about 2 weeks to save. Keep 2 sets of Rare gear in reserve.',
+    outcome: 'Pill push burns ₿ but lands big single-day damage. Stockpile cost dominates. Keep 2 sets of Rare gear in reserve.',
     gear: { weapon: 'legendary', helmet: 'epic', chest: 'epic', pants: 'epic', boots: 'legendary', gloves: 'epic' },
     buffs: { pill: true, ammo: 'ammo', food: 'fish' },
     foundations: {
@@ -1145,15 +1232,24 @@ const PRESETS = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
- *  STATE — viewLevel, selectedPreset, warParams, expansion states
+ *  STATE
  * ═══════════════════════════════════════════════════════════════════ */
 const DEFAULT_WAR_PARAMS = { warDays: 7, hitsPerDay: null, pillsPerDay: 1 };
 let warParams = { ...DEFAULT_WAR_PARAMS };
 let selectedPreset = 'basic';
-let viewLevel = null; // null = "my current level"; otherwise a numeric override
+let viewLevel = null;
 let cached = { player: null, data: null };
 
-/* Target build box expansion — preserved across re-renders. */
+// User-tunable battle bonus % (sum of country order, MU order, patriotic,
+// ally, first-hit-in-battle, etc.). The game's flag→bonus aggregation isn't
+// fully reverse-engineered yet — this knob lets the player set the value
+// they see live in-game. Default 0 = no orders/bonuses active (peacetime
+// preview). Persisted in the URL as `bb`.
+let battleBonusPct = (() => {
+  const v = parseFloat(QS.get('bb'));
+  return isNaN(v) ? 0 : v;
+})();
+
 let targetExpanded = {
   skills: true,
   companies: false,
@@ -1161,25 +1257,6 @@ let targetExpanded = {
   modelDay: false,
   bottomLine: false,
 };
-
-const COMBAT_STAT_DESCRIPTIONS = [
-  { term: 'Attack', desc: 'The base value for Damages calculation.' },
-  { term: 'Precision', desc: 'Chance to hit. Misses cannot crit and deal half damage.' },
-  { term: 'Crit chance', desc: 'Probability of landing a critical hit.' },
-  { term: 'Crit damages', desc: 'Damage factor increase of critical hits over normal hits.' },
-  { term: 'Armor', desc: 'Reduces health lost when fighting.' },
-  { term: 'Dodge', desc: 'Chance to dodge all incoming damage. Dodging also prevents equipment durability loss.' },
-  { term: 'Health', desc: 'Consumed when fighting in battles.' },
-  { term: 'Loot chance', desc: 'Chance per hit to instantly loot. 1% gives 1% PP loot and 0.01% case loot per hit.' },
-  { term: 'Hunger', desc: 'Limit of food consumption per battle.' },
-];
-const ECONOMY_STAT_DESCRIPTIONS = [
-  { term: 'Energy', desc: 'Used to Work or fight. Fills your daily action pool.' },
-  { term: 'Entrepreneurship', desc: 'Used to Self Work in your own companies. Separate pool, parallel to Energy.' },
-  { term: 'Production', desc: 'Production Points generated per work action.' },
-  { term: 'Companies', desc: 'Max companies you can own.' },
-  { term: 'Management', desc: 'Max workers you can manage + daily hire limit.' },
-];
 
 /* ═══════════════════════════════════════════════════════════════════
  *  DATA LOAD
@@ -1195,13 +1272,21 @@ async function resolveUserId(input) {
 }
 
 async function loadPlayer(userId) {
-  const [user, inventory, companyList, pricesR, workersR] = await Promise.allSettled([
+  // First-tier requests in parallel. gameConfig is fetched fresh each
+  // load (config is small after gzip, and we never want a stale-cache bug).
+  const [user, inventory, companyList, pricesR, workersR, gameConfigR] = await Promise.allSettled([
     trpc('user.getUserById', { userId }),
     trpc('inventory.fetchCurrentEquipment', { userId }),
     trpc('company.getCompanies', { userId, perPage: 50 }),
     trpc('itemTrading.getPrices'),
     trpc('worker.getWorkers', { userId }),
+    trpc('gameConfig.getGameConfig'),
   ]);
+
+  CFG_GAME = gameConfigR.status === 'fulfilled' ? gameConfigR.value : null;
+  const cfgError = gameConfigR.status === 'rejected'
+    ? String(gameConfigR.reason?.message || gameConfigR.reason)
+    : (CFG_GAME ? null : 'gameConfig returned empty');
 
   const u = user.status === 'fulfilled' ? user.value : null;
   const ids = companyList.status === 'fulfilled' ? (companyList.value?.items || []) : [];
@@ -1216,6 +1301,7 @@ async function loadPlayer(userId) {
     });
   }
 
+  // Second tier: per-company details, country, MU, workplace company.
   const secondary = await Promise.allSettled([
     ...ids.map(id => trpc('company.getById', { companyId: id })),
     u?.country ? trpc('country.getCountryById', { countryId: u.country }) : Promise.resolve(null),
@@ -1230,6 +1316,26 @@ async function loadPlayer(userId) {
   const mu = secondary[ids.length + 1]?.status === 'fulfilled' ? secondary[ids.length + 1].value : null;
   const workplaceCompany = secondary[ids.length + 2]?.status === 'fulfilled' ? secondary[ids.length + 2].value : null;
 
+  // Fetch each unique worker's full user profile so we can use their REAL
+  // energy and production stats rather than a hardcoded 25 PP / 24 actions
+  // default. v0.9 invented these averages; v0.10 reads them per worker.
+  const workerUserIds = new Set();
+  Object.values(workersByCompanyId).forEach(arr => {
+    (arr || []).forEach(w => { if (w?.user) workerUserIds.add(w.user); });
+  });
+  const workerProfilesByUserId = {};
+  if (workerUserIds.size) {
+    const ids = [...workerUserIds];
+    const results = await Promise.allSettled(
+      ids.map(id => trpc('user.getUserById', { userId: id }))
+    );
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled' && r.value) workerProfilesByUserId[ids[i]] = r.value;
+    });
+  }
+
+  // Your wage at your job (if any). The owner of your workplace lists you
+  // in their workers; that's the canonical source for your wage/fidelity.
   let ownWage = null;
   let ownFidelity = null;
   if (workplaceCompany?.user) {
@@ -1248,8 +1354,7 @@ async function loadPlayer(userId) {
     }
   }
 
-  // Workplace region → country. If foreign, fetch the country so we can
-  // apply the right taxes/bonuses to the job wage.
+  // Workplace region → country (for foreign-employer modifiers).
   let workplaceRegion = null;
   let workplaceCountry = null;
   if (workplaceCompany?.region) {
@@ -1277,11 +1382,13 @@ async function loadPlayer(userId) {
     workplaceRegion,
     workplaceCountry,
     workersByCompanyId,
+    workerProfilesByUserId,
     ownWage, ownFidelity,
     ownWorkOffer: ownWage != null ? { wage: ownWage, fidelity: ownFidelity, source: 'worker_record' } : null,
     prices: pricesR.status === 'fulfilled' ? normalizePrices(pricesR.value) : {},
     pricesError: pricesR.status === 'rejected' ? String(pricesR.reason?.message || pricesR.reason) : null,
     workersError: workersR.status === 'rejected' ? String(workersR.reason?.message || workersR.reason) : null,
+    configError: cfgError,
   };
 }
 
@@ -1377,10 +1484,11 @@ function extractCompanies(data) {
   const items = Array.isArray(data.companies) ? data.companies : [];
   const prices = data.prices || {};
   const workersByCompany = data.workersByCompanyId || {};
-  const A = FACTORY_ASSUMPTIONS;
+  const workerProfiles = data.workerProfilesByUserId || {};
+  const fidBonusPct = fidelityProdBonusPct();
 
-  // Country modifiers — production bonus from strategic resources lifts PP
-  // generated (AE + workers); market tax is taken from sale revenue.
+  // Country modifiers — production bonus from strategic resources lifts
+  // PP generated (AE + workers); market tax is taken from sale revenue.
   const marketTax = data.country?.taxes?.market || 0;
   const prodBonusPct = data.country?.strategicResources?.bonuses?.productionPercent || 0;
   const prodMult = 1 + prodBonusPct / 100;
@@ -1392,7 +1500,7 @@ function extractCompanies(data) {
     const workerCount = co.workerCount ?? 0;
     const aeLevel = co.activeUpgradeLevels?.automatedEngine ?? 0;
     const price = prices[itemCodeStr] != null ? Number(prices[itemCodeStr]) : null;
-    const aePP = (AE_TABLE[aeLevel] ?? (aeLevel * 24)) * prodMult;
+    const aePP = aePPForLevel(aeLevel) * prodMult;
 
     const workers = workersByCompany[id] || [];
     let workerPP = 0;
@@ -1403,31 +1511,42 @@ function extractCompanies(data) {
       workers.forEach(w => {
         const fid = Number(w.fidelity) || 0;
         const wage = Number(w.wage) || 0;
-        const pp = A.workerActionsPerDay * A.workerProduction * (1 + fid / 100) * prodMult;
+        // Pull the worker's real energy + production stats from their profile.
+        const profile = workerProfiles[w.user];
+        const wEnergy = profile?.skills?.energy?.total ?? profile?.skills?.energy?.value ?? 0;
+        const wProd   = profile?.skills?.production?.total ?? profile?.skills?.production?.value ?? 0;
+        const actsPerDay = actionsPerDay(wEnergy);
+        // Worker PP/day = actions/day × production stat × fidelity bonus × country prod bonus.
+        // Wage is paid on the RAW pp (pre-bonuses) — the country bonus and
+        // fidelity uplift accrue to the company, not the worker.
+        const rawPP = actsPerDay * wProd;
+        const pp = rawPP * (1 + fid * fidBonusPct / 100) * prodMult;
         workerPP += pp;
-        const dailyWage = wage * pp;
+        const dailyWage = wage * rawPP;
         wageSum += dailyWage;
-        workerDetails.push({ fidelity: fid, wage, dailyWage, pp });
+        workerDetails.push({
+          userId: w.user, fidelity: fid, wage, dailyWage, pp,
+          energy: wEnergy, production: wProd, actionsPerDay: actsPerDay,
+          hasProfile: !!profile,
+        });
       });
       dailyWageCost = wageSum;
     } else if (workerCount > 0) {
-      workerPP = workerCount * A.workerActionsPerDay * A.workerProduction * prodMult;
+      // No worker records available — leave workerPP at 0 and flag below.
+      // We won't invent average-worker numbers.
     }
 
     const totalPP = aePP + workerPP;
-    const recipe = RECIPES[itemCodeStr];
-    const ppPer = recipe?.ppPer ?? 1;
-    const ingredients = recipe?.ingredients || {};
-    const isProcessed = Object.keys(ingredients).length > 0;
+    const ppPer = ppPerOutput(itemCodeStr);
+    const ingredients = ingredientsFor(itemCodeStr);
+    const processed = isItemProcessed(itemCodeStr);
 
-    // dailyOutput = total PP generated, divided by PP cost per output unit.
-    // For raw materials ppPer = 1 (1 PP → 1 unit). For steel ppPer = 10.
-    const dailyOutput = (totalPP / ppPer) * A.outputCalibration;
+    const dailyOutput = totalPP / Math.max(1, ppPer);
     const dailyRevenue = price != null ? dailyOutput * price * marketMult : null;
 
     const recipeBreakdown = [];
     let dailyIngredientCost = null;
-    if (isProcessed) {
+    if (processed) {
       let allPriced = true;
       let cost = 0;
       for (const [ing, qty] of Object.entries(ingredients)) {
@@ -1452,8 +1571,9 @@ function extractCompanies(data) {
       stored: co.production ?? null,
       estimatedValue: co.estimatedValue ?? null,
       workerCount, workers: workerDetails, workerPP,
-      isProcessed, recipeBreakdown, dailyIngredientCost,
+      isProcessed: processed, recipeBreakdown, dailyIngredientCost,
       marketPrice: price, dailyOutput, dailyRevenue, dailyWageCost, dailyNet,
+      ppPer,
     };
   });
 }
@@ -1462,35 +1582,33 @@ function extractCompanies(data) {
  *  COMPUTE
  * ═══════════════════════════════════════════════════════════════════ */
 function buildLabel(player) {
-  const fightSpent = pointsSpent(player.levels, FIGHT_KEYS);
-  const ecoSpent = pointsSpent(player.levels, ECO_KEYS);
+  const fightSpent = pointsSpentFromCfg(player.levels, FIGHT_KEYS);
+  const ecoSpent = pointsSpentFromCfg(player.levels, ECO_KEYS);
   const total = fightSpent + ecoSpent;
   if (total === 0) return { label: 'Unallocated', sub: 'No skill points spent' };
   const fightShare = fightSpent / total;
   const fp = Math.round(fightShare * 100);
   const ep = 100 - fp;
-  // Thresholds: 9 fight skills vs 5 eco — an even spread by count would be
-  // 64% fight, so we anchor "Fight build" well above that and "Eco build"
-  // well below 50% (eco-heavy enough that they're actively skipping fight
-  // skills despite the larger fight tree).
   if (fightShare > 0.75) return { label: 'Fight build', sub: `${fp}% fight / ${ep}% eco` };
   if (fightShare < 0.50) return { label: 'Eco build',   sub: `${fp}% fight / ${ep}% eco` };
   return                       { label: 'Hybrid build', sub: `${fp}% fight / ${ep}% eco` };
-}
-
-function actionsPerDay(bar, breakRoomLevel = 1) {
-  // Bar regens at 10%/hour (verified: API returns hourlyBarRegen matching
-  // bar × 0.10). Energy cost per action depends on the company's Break Room
-  // upgrade: cost = max(1, 8 − breakRoom). Default breakRoom 1 → 7/action.
-  const cost = Math.max(1, 8 - breakRoomLevel);
-  return (bar * 2.4) / cost;
 }
 
 function effectiveHitsPerDay(player, params) {
   if (params.hitsPerDay != null && !isNaN(params.hitsPerDay) && params.hitsPerDay >= 0) {
     return params.hitsPerDay;
   }
-  return Math.round(actionsPerDay(player.eco.energy));
+  // Two ceilings — take the lower:
+  //   energyCeiling: actions per day from your Energy pool
+  //   hpCeiling:    hits per day your HP pool + food regen can sustain
+  // If HP cost isn't loaded, fall back to energy alone (old behaviour).
+  const energyCeiling = actionsPerDay(player.eco.energy);
+  const hpPerHit = hpCostPerHit(player.derived.armRaw);
+  if (!hpPerHit) return Math.round(energyCeiling);
+  // Food regen during war isn't modelled per-hit yet — for now, ceiling is
+  // raw HP pool ÷ HP-per-hit. Food extends this; pill push burns it faster.
+  const hpCeiling = player.derived.hp / hpPerHit;
+  return Math.round(Math.min(energyCeiling, hpCeiling));
 }
 
 function computeFoundations(player, comps, preset) {
@@ -1628,32 +1746,42 @@ function computeConsumables(preset, prices, player, params) {
 
 function computeTargetStats(preset, militaryRankPercent = 0) {
   const g = preset.gear, b = preset.buffs;
-  const gs = r => GEAR_STATS[r];
 
-  const weaponAtk  = midpoint(gs(g.weapon).weapon.attack);
-  const weaponCrit = midpoint(gs(g.weapon).weapon.crit);
-  const helmetCD   = midpoint(gs(g.helmet).helmet.critDamage);
-  const chestArm   = midpoint(gs(g.chest).chest.armor);
-  const pantsArm   = midpoint(gs(g.pants).pants.armor);
-  const bootsDdg   = midpoint(gs(g.boots).boots.dodge);
-  const glovesPrc  = midpoint(gs(g.gloves).gloves.precision);
+  // Read gear stat midpoints from the actual item codes in config.
+  // Each slot/rarity maps to a specific item (e.g. boots rare → boots3).
+  const weaponAtk  = gearStatMid(itemCode('weapon', g.weapon), 'attack');
+  const weaponCrit = gearStatMid(itemCode('weapon', g.weapon), 'criticalChance');
+  const helmetCD   = gearStatMid(itemCode('helmet', g.helmet), 'criticalDamages');
+  const chestArm   = gearStatMid(itemCode('chest',  g.chest),  'armor');
+  const pantsArm   = gearStatMid(itemCode('pants',  g.pants),  'armor');
+  const bootsDdg   = gearStatMid(itemCode('boots',  g.boots),  'dodge');
+  const glovesPrc  = gearStatMid(itemCode('gloves', g.gloves), 'precision');
 
-  const pillMult = b.pill ? BUFFS.pill.damageMult : 1;
-  const ammoMult = BUFFS.ammo[b.ammo] ?? 1;
-  const foodHp   = BUFFS.food[b.food] ?? 0;
+  const pillMult = b.pill ? pillDamageMult() : 1;
+  const ammoMult = ammoDamageMult(CONSUMABLES[b.ammo]?.code);
+  const foodHp   = foodHpMult(CONSUMABLES[b.food]?.code);
   const rankMult = 1 + militaryRankPercent / 100;
+
+  // Base values come from skill level 0 in config (e.g. attack base = 100).
+  const baseAtk = skillValueAt('attack', 0) ?? 100;
+  const basePrc = skillValueAt('precision', 0) ?? 50;
+  const baseCC  = skillValueAt('criticalChance', 0) ?? 10;
+  const baseCD  = skillValueAt('criticalDamages', 0) ?? 100;
+  const baseHp  = skillValueAt('health', 0) ?? 100;
+  const armSoft = skillSoftCap('armor') ?? 40;
+  const ddgSoft = skillSoftCap('dodge') ?? 40;
 
   const armRaw = chestArm + pantsArm;
   const ddgRaw = bootsDdg;
 
   return {
-    atk: (100 + weaponAtk) * ammoMult * pillMult * rankMult,
-    prc: 50 + glovesPrc,
-    cc:  10 + weaponCrit,
-    cd:  100 + helmetCD,
-    armRaw, arm: armRaw / (armRaw + 40) * 100,
-    ddgRaw, ddg: ddgRaw / (ddgRaw + 40) * 100,
-    hp:  100 * (1 + foodHp),
+    atk: (baseAtk + weaponAtk) * ammoMult * pillMult * rankMult,
+    prc: basePrc + glovesPrc,
+    cc:  baseCC + weaponCrit,
+    cd:  baseCD + helmetCD,
+    armRaw, arm: armRaw / (armRaw + armSoft) * 100,
+    ddgRaw, ddg: ddgRaw / (ddgRaw + ddgSoft) * 100,
+    hp:  baseHp * (1 + foodHp),
   };
 }
 
@@ -1668,8 +1796,7 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
   const factoriesHaveWage = comps.some(c => c.dailyWageCost != null);
 
   const ownWage = offerWage(data.ownWorkOffer);
-  const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
-  const workActionsPeace = actionsPerDay(player.eco.energy, workplaceBR);
+  const workActionsPeace = actionsPerDay(player.eco.energy);
   const playerProd = player.eco.production || 0;
   const workCountry = data.workplaceCountry || data.country;
   const incomeTax = workCountry?.taxes?.income || 0;
@@ -1677,9 +1804,13 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
   const wageMod = (1 - incomeTax / 100) * (1 + prodBonusPct / 100);
   const wageIncomePeace = ownWage != null ? ownWage * workActionsPeace * playerProd * wageMod : null;
 
-  const lootIncome = WAR_LOOT_INCOME_PER_DAY;
+  // War-time income: daily mission gold is the only deterministic loot
+  // line we can pull from config. Case drops, scrap, ranking loot and
+  // bounty all add unmeasured income on top.
+  const missionIncome = dailyMissionMoney();
+
   const peaceNet = (wageIncomePeace ?? 0) + factoryNet;
-  const warNet   = factoryNet + lootIncome - consumablesDaily;
+  const warNet   = factoryNet + missionIncome - consumablesDaily;
   const burnRate = peaceNet - warNet;
 
   return {
@@ -1687,7 +1818,7 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
     factoryRevenue, factoryWageCost, factoryIngCost, factoryNet,
     factoriesHaveRevenue, factoriesHaveWage,
     ownWage, workActionsPeace, wageIncomePeace,
-    lootIncome,
+    missionIncome,
     peaceNet, warNet, burnRate,
     hasOwnWage: ownWage != null,
     consumableLines: consumables?.items || [],
@@ -1698,6 +1829,14 @@ function computeDailyDuringWar(preset, prices, player, data, params, consumables
  *  RENDER — PLAYER HEADER + ROOT
  * ═══════════════════════════════════════════════════════════════════ */
 function renderPlayer(data) {
+  if (data.configError) {
+    setStatus('error', `Game config failed to load: ${data.configError}. Without it the planner can't compute anything reliably — try refreshing.`);
+    return;
+  }
+  if (!CFG_GAME) {
+    setStatus('error', 'Game config missing. Refresh to retry.');
+    return;
+  }
   if (!data.user) {
     setStatus('error', `Could not load user. ${data.userError || ''}`);
     return;
@@ -1706,7 +1845,6 @@ function renderPlayer(data) {
   cached.player = p;
   cached.data = data;
 
-  // Reset view level to "current level" on a fresh load.
   viewLevel = null;
 
   const av = $('#avatar');
@@ -1730,26 +1868,26 @@ function renderPlayer(data) {
 
   if (DEBUG) {
     $('#debug-panel').classList.remove('hidden');
-    // Surface the first worker's full payload at the top so we can see
-    // exactly what fields the API returns per worker (looking for a
-    // `production` field to replace the hardcoded 25 PP default).
-    // Find the first non-empty worker array across all companies.
     const allWorkerArrays = Object.values(data.workersByCompanyId || {});
     const firstCompanyWorkers = allWorkerArrays.find(arr => arr && arr.length > 0);
     const workerSample = firstCompanyWorkers?.[0] || null;
+    const workerProfileSample = workerSample?.user ? data.workerProfilesByUserId?.[workerSample.user] : null;
     if (workerSample) {
       console.log('%c[Worker sample] keys:', 'color:#4ad395', Object.keys(workerSample));
       console.log('[Worker sample] full object:', workerSample);
+      console.log('[Worker profile] sample:', workerProfileSample);
     }
     $('#debug-content').textContent = JSON.stringify({
       _WORKER_SAMPLE: workerSample,
-      _WORKER_SAMPLE_KEYS: workerSample ? Object.keys(workerSample) : [],
+      _WORKER_PROFILE_SAMPLE: workerProfileSample,
+      _CFG_GAME_KEYS: CFG_GAME ? Object.keys(CFG_GAME) : null,
       userId: data.userId, user: data.user, inventory: data.inventory,
       companies: data.companies, country: data.country, mu: data.mu,
       ownWorkOffer: data.ownWorkOffer, workersByCompanyId: data.workersByCompanyId,
       prices: data.prices,
       errors: { user: data.userError, inventory: data.inventoryError,
-        companies: data.companiesError, prices: data.pricesError, workers: data.workersError }
+        companies: data.companiesError, prices: data.pricesError,
+        workers: data.workersError, config: data.configError }
     }, null, 2);
   }
 
@@ -1757,7 +1895,7 @@ function renderPlayer(data) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- *  RENDER — CURRENT STATE (four compact collapsible cards)
+ *  RENDER — CURRENT STATE
  * ═══════════════════════════════════════════════════════════════════ */
 function renderCurrentState(p, data) {
   const eq = extractEquipment(data.inventory);
@@ -1765,20 +1903,16 @@ function renderCurrentState(p, data) {
 
   const build = buildLabel(p);
   const hitsPerDay = actionsPerDay(p.eco.energy);
-  const dmgPerDay = expectedDamagePerHit(p.derived) * hitsPerDay;
+  const dmgPerDay = expectedDamagePerHit(p.derived, p.militaryRankPercent, battleBonusPct) * hitsPerDay;
 
   const ownWage = offerWage(data.ownWorkOffer);
-  // Job wage modifiers use the EMPLOYER's country, not yours. If we managed
-  // to detect a foreign employer, data.workplaceCountry is set; otherwise
-  // we fall back to your own country (domestic employer assumption).
   const playerProd = p.eco.production || 0;
   const workCountry = data.workplaceCountry || data.country;
   const incomeTax = workCountry?.taxes?.income || 0;
   const prodBonusPct = workCountry?.strategicResources?.bonuses?.productionPercent || 0;
   const wageMod = (1 - incomeTax / 100) * (1 + prodBonusPct / 100);
-  const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
   const dailyWageIncome = ownWage != null
-    ? ownWage * actionsPerDay(p.eco.energy, workplaceBR) * playerProd * wageMod
+    ? ownWage * actionsPerDay(p.eco.energy) * playerProd * wageMod
     : 0;
   const factoryNet = comps.reduce((s, c) => s + (c.dailyNet || 0), 0);
   const totalDailyIncome = factoryNet + dailyWageIncome;
@@ -1808,10 +1942,28 @@ function renderCurrentState(p, data) {
 
     ${compactCard('wealth',
       `<span class="cc-title">Wealth</span>
-       <span class="cc-summary"><span class="cc-pill">${wealthTotal != null ? fmtCompact(wealthTotal) + ' ₿' : 'unavailable'}</span></span>`,
+      <span class="cc-summary"><span class="cc-pill">${wealthTotal != null ? fmtCompact(wealthTotal) + ' ₿' : 'unavailable'}</span></span>`,
       renderWealthBody(data)
     )}
   `;
+
+  // Wire the battle-bonus knob (rendered inside the Damage card body).
+  const bbInput = $('#battle-bonus-input');
+  if (bbInput) {
+    bbInput.addEventListener('change', () => {
+      const v = parseFloat(bbInput.value);
+      battleBonusPct = isNaN(v) || v < 0 ? 0 : v;
+      // Persist in URL so the value sticks across reloads of the same player.
+      const qs = new URLSearchParams(location.search);
+      if (battleBonusPct > 0) qs.set('bb', String(battleBonusPct));
+      else qs.delete('bb');
+      history.replaceState(null, '', '?' + qs.toString());
+      // Re-render to reflect the new value everywhere.
+      renderCurrentState(p, data);
+    });
+    // Stop clicks inside the input from collapsing the parent <details>.
+    bbInput.addEventListener('click', e => e.stopPropagation());
+  }
 }
 
 function compactCard(id, head, body) {
@@ -1822,8 +1974,8 @@ function compactCard(id, head, body) {
 }
 
 function renderBuildBody(p) {
-  const fightPts = pointsSpent(p.levels, FIGHT_KEYS);
-  const ecoPts = pointsSpent(p.levels, ECO_KEYS);
+  const fightPts = pointsSpentFromCfg(p.levels, FIGHT_KEYS);
+  const ecoPts = pointsSpentFromCfg(p.levels, ECO_KEYS);
   const totalCap = p.spentSp + p.availableSp;
 
   const fightSkills = [
@@ -1877,6 +2029,11 @@ function skillRow(label, value) {
 function renderDamageBody(p, eq) {
   const d = p.derived;
   const hitsPerDay = actionsPerDay(p.eco.energy);
+  const hpPerHit = hpCostPerHit(d.armRaw);
+  const hitsBefore = hpPerHit ? Math.floor(d.hp / hpPerHit) : '–';
+  const rankPct = p.militaryRankPercent || 0;
+  const expDmg = expectedDamagePerHit(d, rankPct, battleBonusPct);
+  const baseDmgNoBonus = expectedDamagePerHit(d, rankPct, 0);
   return `
     <div class="stats">
       <div class="stat"><span class="stat-label">Attack</span><span class="stat-value">${fmtInt(d.atk)}</span></div>
@@ -1886,9 +2043,29 @@ function renderDamageBody(p, eq) {
       <div class="stat"><span class="stat-label">Armor</span><span class="stat-value">${fmtInt(d.arm)}%</span></div>
       <div class="stat"><span class="stat-label">Dodge</span><span class="stat-value">${fmtInt(d.ddg)}%</span></div>
       <div class="stat"><span class="stat-label">Health</span><span class="stat-value">${fmtInt(d.hp)}</span></div>
+      <div class="stat"><span class="stat-label">HP / hit</span><span class="stat-value">${hpPerHit ? fmt(hpPerHit, 1) : '–'}</span></div>
     </div>
     <div class="section">
-      <div class="section-label">Equipped gear<span class="right">${fmt(hitsPerDay, 1)} hits/day</span></div>
+      <div class="section-label">
+        Expected damage / hit
+        ${infoBtn([
+          { term: 'Formula', desc: 'atk × (1 + mil rank%) × (1 + battle bonus%) × precision/crit/miss weighting.' },
+          { term: 'Mil rank', desc: `+${fmt(rankPct, 1)}% (rank ${p.militaryRank ?? '?'}).` },
+          { term: 'Battle bonus', desc: 'Sum of country order, MU order, patriotic, ally, first-hit, etc. Shown live in-game on the battle screen — copy that number in.' },
+          { term: 'Roll variance', desc: 'Real hits vary ±1-2% from this average due to RNG damage roll.' },
+        ], 'Damage formula')}
+        <span class="right">${fmtInt(expDmg)} dmg${battleBonusPct > 0 ? ` <span style="color: var(--dimmer); font-weight: 400;">(${fmtInt(baseDmgNoBonus)} without bonuses)</span>` : ''}</span>
+      </div>
+      <div class="plan-control" style="margin-bottom: 0.7rem;">
+        <label>Battle bonus
+          <input id="battle-bonus-input" type="number" min="0" max="200" step="1" value="${battleBonusPct}">
+          <span class="muted">%</span>
+        </label>
+        <span class="muted" style="font-size: 0.78rem;">Set this to the aggregate % shown in-game on the battle screen (country/MU orders, ally, patriotic, first-hit, etc.). 0 = peacetime preview.</span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Equipped gear<span class="right">${fmt(hitsPerDay, 1)} hits/day · ${hitsBefore} hits before regen</span></div>
       ${equipmentTable(eq)}
     </div>
   `;
@@ -1932,19 +2109,13 @@ function equipmentTable(eq) {
 
 function renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet) {
   const eco = p.eco;
-  const workActions = actionsPerDay(eco.energy, 1);
-  const entreActions = actionsPerDay(eco.entrepreneurship, 1);
-  // For the Job wage line: actions/day depends on YOUR EMPLOYER's Break Room.
-  const workplaceBR = data.workplaceCompany?.activeUpgradeLevels?.breakRoom || 1;
-  const wageActions = actionsPerDay(eco.energy, workplaceBR);
+  const workActions = actionsPerDay(eco.energy);
+  const entreActions = actionsPerDay(eco.entrepreneurship);
 
   const factoryRevenue = comps.reduce((s, c) => s + (c.dailyRevenue || 0), 0);
   const factoryWageCost = comps.reduce((s, c) => s + (c.dailyWageCost || 0), 0);
   const factoryIngCost = comps.reduce((s, c) => s + (c.dailyIngredientCost || 0), 0);
 
-  // Surface country modifiers so the user can see what's being applied.
-  // Job wage uses employer's country (foreign or own); company revenue
-  // uses your own country (market tax + your prod bonus).
   const isForeignEmployer = !!data.workplaceCountry;
   const employerCountry = data.workplaceCountry || data.country;
   const ownCountry = data.country;
@@ -1986,7 +2157,7 @@ function renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet) 
         <h5>Daily inflow</h5>
         ${ownWage != null ? `
           <div class="bs-line">
-            <span class="ll">Job wage<span class="qty" style="color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem;">${fmt(ownWage, 3)} ₿/PP × ${eco.production} PP × ${fmt(wageActions, 1)} (BR ${workplaceBR})</span></span>
+            <span class="ll">Job wage<span class="qty" style="color: var(--dimmer); font-family: var(--mono); font-size: 0.74rem; margin-left: 0.3rem;">${fmt(ownWage, 3)} ₿/PP × ${eco.production} PP × ${fmt(workActions, 1)} actions</span></span>
             <span class="lv pos">${fmtSigned(dailyWageIncome)}</span>
           </div>` : ''}
         <div class="bs-line">
@@ -2039,18 +2210,21 @@ function renderIncomeBody(p, data, comps, ownWage, dailyWageIncome, factoryNet) 
 
 function companyBreakdownRows(c) {
   const rows = [];
-  rows.push({ term: 'Engine', desc: c.aeLevel ? `AE ${c.aeLevel} → ${fmtInt(c.aePP)} units/day` : 'No automated engine' });
+  rows.push({ term: 'Engine', desc: c.aeLevel ? `AE ${c.aeLevel} → ${fmtInt(c.aePP)} PP/day (config)` : 'No automated engine' });
 
   if (c.workers && c.workers.length) {
-    const fidList = c.workers.map(w => `fid ${w.fidelity} @ ${fmt(w.wage, 3)} ₿/PP`).join(', ');
-    rows.push({ term: 'Workers', desc: `${c.workers.length} (${fidList}) → +${fmtInt(c.workerPP)} units/day, wages ${fmtBtc(c.dailyWageCost)}/day` });
+    const lines = c.workers.map(w => {
+      if (!w.hasProfile) return `fid ${w.fidelity} @ ${fmt(w.wage, 3)} ₿/PP — profile unavailable`;
+      return `fid ${w.fidelity} @ ${fmt(w.wage, 3)} ₿/PP, E${w.energy}/P${w.production} → ${fmt(w.actionsPerDay, 1)} acts/day, ${fmtInt(w.pp)} PP`;
+    }).join(' · ');
+    rows.push({ term: 'Workers', desc: `${c.workers.length} (${lines}) → wages ${fmtBtc(c.dailyWageCost)}/day` });
   } else if (c.workerCount > 0) {
-    rows.push({ term: 'Workers', desc: `${c.workerCount} worker(s), details not loaded` });
+    rows.push({ term: 'Workers', desc: `${c.workerCount} worker(s), details not loaded — PP not counted` });
   } else {
     rows.push({ term: 'Workers', desc: 'None' });
   }
 
-  if (c.dailyOutput) rows.push({ term: 'Total output', desc: `${fmtInt(c.dailyOutput)} units/day` });
+  if (c.dailyOutput) rows.push({ term: 'Output', desc: `${fmtInt(c.aePP + c.workerPP)} PP/day ÷ ${c.ppPer} PP/unit = ${fmtInt(c.dailyOutput)} units/day` });
 
   if (c.marketPrice != null) {
     rows.push({ term: 'Revenue', desc: `${fmt(c.marketPrice, 3)} ₿ × ${fmtInt(c.dailyOutput)} = ${fmtBtc(c.dailyRevenue)}/day` });
@@ -2060,7 +2234,7 @@ function companyBreakdownRows(c) {
 
   if (c.isProcessed && c.dailyIngredientCost != null) {
     const recipeStr = c.recipeBreakdown.map(r => `${r.qty}× ${r.ingredient}`).join(' + ');
-    rows.push({ term: 'Ingredients', desc: `${recipeStr} → −${fmtBtc(c.dailyIngredientCost)}/day` });
+    rows.push({ term: 'Ingredients', desc: `${recipeStr} per unit → −${fmtBtc(c.dailyIngredientCost)}/day` });
   }
 
   if (c.dailyNet != null) rows.push({ term: 'Net', desc: `${fmtSigned(c.dailyNet)}/day` });
@@ -2117,20 +2291,17 @@ function renderWealthBody(data) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- *  RENDER — TARGET BUILD (5 collapsible boxes)
+ *  RENDER — TARGET BUILD
  * ═══════════════════════════════════════════════════════════════════ */
 function renderTargetBuild(p, data) {
   const preset = PRESETS[selectedPreset];
   const currentLevel = parseInt(p.level, 10) || 0;
 
-  // Resolve effective plan level. null = "my current level".
-  // Floor at 20 (no published plan below that), cap at 30.
   const minLevel = Math.max(20, currentLevel);
   const effectiveLevel = viewLevel != null ? viewLevel : minLevel;
   const isProjected = currentLevel < 20;
   const isUnsupported = currentLevel > 30;
 
-  // Pre-compute self-sustain status for both presets, for the tab badges.
   const tabBadges = {};
   for (const key of Object.keys(PRESETS)) {
     const ps = PRESETS[key];
@@ -2160,7 +2331,6 @@ function renderTargetBuild(p, data) {
     ? 'Some prices missing — total is a lower bound.'
     : `${escapeHtml(preset.daysLabel || 'War days')}: ${warParams.warDays}`;
 
-  // Tabs
   const tabsHtml = Object.entries(PRESETS).map(([key, ps]) => {
     const badge = tabBadges[key];
     return `<button type="button" class="tab ${key === selectedPreset ? 'active' : ''}" data-preset="${key}">
@@ -2170,10 +2340,8 @@ function renderTargetBuild(p, data) {
     </button>`;
   }).join('');
 
-  // Level + duration control
   const levelControl = renderLevelControl(currentLevel, effectiveLevel, isProjected, isUnsupported, preset);
 
-  // The 5 boxes
   const boxes = [
     targetBox('skills', '1', 'Skill allocation',
       skillSummary(p, preset, effectiveLevel),
@@ -2208,7 +2376,6 @@ function renderTargetBuild(p, data) {
     ${boxes}
   `;
 
-  // Wire up handlers.
   $$('#target-content .tab').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedPreset = btn.dataset.preset;
@@ -2298,7 +2465,6 @@ function renderLevelControl(currentLevel, effectiveLevel, isProjected, isUnsuppo
   </div>`;
 }
 
-/* ─── Box summaries (single-line right-aligned) ──────────────────── */
 function skillSummary(p, preset, effectiveLevel) {
   if (!preset.skillPlan) return '<span class="muted">no plan</span>';
   const currentLevel = parseInt(p.level, 10) || 0;
@@ -2329,7 +2495,6 @@ function bottomLineSummary(daily, totalToPrepare, params) {
   return `<span class="mono ${grandSwing >= 0 ? 'pos' : 'neg'}">${fmtSigned(grandSwing)}</span>`;
 }
 
-/* ─── Box bodies ─────────────────────────────────────────────────── */
 function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
   if (!preset.skillPlan) {
     return `<p class="placeholder-text">No published skill plan for this preset yet.</p>`;
@@ -2361,7 +2526,6 @@ function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
       </div>`;
     }).join('');
 
-  // Project skills to viewLevel by adding plan deltas to current levels.
   const projected = projectSkillsAtLevel(p.levels, preset.skillPlan, effectiveLevel);
   const projectionRow = (key) => {
     const lvl = projected[key] || 0;
@@ -2373,7 +2537,7 @@ function renderSkillBox(p, preset, effectiveLevel, currentLevel) {
       <span class="skill-name">${SKILL_LABELS[key]}</span>
       <span class="skill-value">
         <span class="total">lvl ${lvl}</span>${deltaStr}
-        <span class="sub"> → ${val}</span>
+        <span class="sub"> → ${val ?? '–'}</span>
       </span>
     </div>`;
   };
@@ -2424,8 +2588,6 @@ function renderCompaniesBox(p, data, foundations, comps, preset) {
     actionsHtml = `<div class="action-list">${foundations.items.map(actionRow).join('')}</div>`;
   }
 
-  // Workforce check — flag if the player can't manage the workers their
-  // build implies, or if they're overcommitted.
   const totalWorkers = comps.reduce((s, c) => s + (c.workerCount || 0), 0);
   let workforceHtml = '';
   if (totalWorkers > eco.management) {
@@ -2494,10 +2656,10 @@ function renderModelDayBox(daily, params, preset) {
   } else {
     inLines.push(`<div class="flow-line"><span class="ll">Company revenue</span><span class="lv unk">unavailable</span></div>`);
   }
-  if (daily.lootIncome > 0) {
-    inLines.push(`<div class="flow-line"><span class="ll">Loot + missions <span class="qty">(est)</span></span><span class="lv pos">${fmtSigned(daily.lootIncome)}</span></div>`);
+  if (daily.missionIncome > 0) {
+    inLines.push(`<div class="flow-line"><span class="ll">Daily mission <span class="qty">(complete daily)</span></span><span class="lv pos">${fmtSigned(daily.missionIncome)}</span></div>`);
   }
-  const moneyIn = (daily.factoriesHaveRevenue ? daily.factoryRevenue : 0) + (daily.lootIncome || 0);
+  const moneyIn = (daily.factoriesHaveRevenue ? daily.factoryRevenue : 0) + (daily.missionIncome || 0);
 
   const outLines = [];
   if (daily.factoriesHaveWage && daily.factoryWageCost > 0) {
@@ -2522,7 +2684,7 @@ function renderModelDayBox(daily, params, preset) {
   const netClass = netDay >= 0 ? 'positive' : 'negative';
 
   return `
-    <p class="note" style="margin-top: 0;">One typical day during the war. Working-for-others wage pauses while Energy goes to fighting.</p>
+    <p class="note" style="margin-top: 0;">One typical day during the war. Working-for-others wage pauses while Energy goes to fighting. Case/scrap/ranking loot adds variable income on top of mission gold.</p>
     <div class="war-flow">
       <div class="flow-block">
         <h5>Money in</h5>
@@ -2609,7 +2771,7 @@ function renderBottomLineBox(daily, totalToPrepare, params, preset, gearNeeds, c
       </div>
     </div>
 
-    <p class="note">Numbers ignore: scrap/case drop value beyond the ${fmtBtc(WAR_LOOT_INCOME_PER_DAY)}/day estimate, mission rewards beyond dailies, and any bounties.</p>
+    <p class="note">Modelled income lines: factory revenue, daily mission (${fmtBtc(daily.missionIncome)}). Not yet modelled: ranking loot (scales with damage × battle pool, formula known), case/scrap drops, battle loot, bounties. All count as upside on top of the totals above.</p>
   `;
 }
 

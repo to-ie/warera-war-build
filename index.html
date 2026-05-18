@@ -843,6 +843,10 @@ const DEBUG = QS.has('debug');
  * ═══════════════════════════════════════════════════════════════════ */
 let CFG_GAME = null;
 
+// Sanity check: log the initial bb value so we can verify it's surviving
+// the URL load. Remove once verified.
+console.log('[init] battleBonusPct from URL =', new URLSearchParams(location.search).get('bb'));
+
 /* ═══════════════════════════════════════════════════════════════════
  *  UTILITIES
  * ═══════════════════════════════════════════════════════════════════ */
@@ -2831,8 +2835,9 @@ async function load(username) {
     renderPlayer(data);
     const newQs = new URLSearchParams();
     newQs.set('u', username);
+    if (battleBonusPct > 0) newQs.set('bb', String(battleBonusPct));
     if (DEBUG) newQs.set('debug', '1');
-    history.replaceState(null, '', '?' + newQs.toString());
+    history.replaceState(null, '', location.pathname + '?' + newQs.toString());
     setStatus('ok', `Loaded ${data.user?.username || username}.`);
   } catch (e) {
     console.error(e);

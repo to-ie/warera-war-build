@@ -777,7 +777,7 @@
     <div class="brand">
       <h1>War <span class="accent">Readiness</span></h1>
     </div>
-    <span class="brand sub">build planner for warera.io · v0.11</span>
+    <span class="brand sub">build planner for warera.io · v0.12</span>
   </div>
 </div>
 
@@ -870,6 +870,12 @@ function expectedDamagePerHit(d, rankPct = 0, battleBonusPct = 0) {
   const landed = prc * ((1 - cc) * baseAtk + cc * baseAtk * cdMult);
   const missed = (1 - prc) * baseAtk * 0.5;
   return landed + missed;
+}
+
+const RNG_ROLL = 0.03;
+function damageRange(d, rankPct = 0, battleBonusPct = 0) {
+  const central = expectedDamagePerHit(d, rankPct, battleBonusPct);
+  return [central * (1 - RNG_ROLL), central * (1 + RNG_ROLL)];
 }
 function flag(code) {
   if (!code || code.length !== 2) return '🏳️';
@@ -1875,10 +1881,10 @@ function renderCurrentState(p, data) {
     bbInput.dataset.bound = '1';
     bbInput.addEventListener('input', () => {
       const v = parseFloat(bbInput.value);
-      battleBonusPct = isNaN(v) || v < 0 ? 0 : v;
+      battleBonusPct = isNaN(v) ? 0 : v;
 
       const qs = new URLSearchParams(location.search);
-      if (battleBonusPct > 0) qs.set('bb', String(battleBonusPct));
+      if (battleBonusPct !== 0) qs.set('bb', String(battleBonusPct));
       else qs.delete('bb');
       history.replaceState(null, '', location.pathname + '?' + qs.toString());
 
@@ -1887,6 +1893,7 @@ function renderCurrentState(p, data) {
       const hitsPerDay = actionsPerDay(currP.eco.energy);
       const rankPct = currP.militaryRankPercent || 0;
       const expDmg = expectedDamagePerHit(currP.derived, rankPct, battleBonusPct);
+      const [rangeLow, rangeHigh] = damageRange(currP.derived, rankPct, battleBonusPct);
       const expDmgNoBonus = expectedDamagePerHit(currP.derived, rankPct, 0);
       const dmgPerDay = expDmg * hitsPerDay;
 
@@ -1896,9 +1903,7 @@ function renderCurrentState(p, data) {
         if (pill) pill.textContent = `${fmtCompact(dmgPerDay)} dmg/day`;
         const labels = damageCard.querySelectorAll('.section-label .right');
         if (labels[0]) {
-          labels[0].innerHTML = `${fmtInt(expDmg)} dmg${battleBonusPct > 0
-            ? ` <span style="color: var(--dimmer); font-weight: 400;">(${fmtInt(expDmgNoBonus)} without bonuses)</span>`
-            : ''}`;
+          labels[0].innerHTML = `${fmtInt(expDmg)} dmg <span style="color: var(--dimmer); font-weight: 400;">(${fmtInt(rangeLow)}&ndash;${fmtInt(rangeHigh)} range${battleBonusPct !== 0 ? `, ${fmtInt(expDmgNoBonus)} no bonuses` : ''})</span>`;
         }
       }
     });
@@ -1973,6 +1978,7 @@ function renderDamageBody(p, eq) {
   const hitsNoFood = hpPerHit ? Math.floor(d.hp / hpPerHit) : null;
   const rankPct = p.militaryRankPercent || 0;
   const expDmg = expectedDamagePerHit(d, rankPct, battleBonusPct);
+  const [rangeLow, rangeHigh] = damageRange(d, rankPct, battleBonusPct);
   const baseDmgNoBonus = expectedDamagePerHit(d, rankPct, 0);
   const hitsLabel = hitsNoFood != null
     ? `${hitsNoFood} hits on base HP (no food)`
@@ -1992,19 +1998,20 @@ function renderDamageBody(p, eq) {
       <div class="section-label">
         Expected damage / hit
         ${infoBtn([
-          { term: 'Formula', desc: 'atk × (1 + mil rank%) × (1 + battle bonus%) × precision/crit/miss weighting.' },
-          { term: 'Mil rank', desc: `+${fmt(rankPct, 1)}% (rank ${p.militaryRank ?? '?'}).` },
-          { term: 'Battle bonus', desc: 'Sum of country order, MU order, patriotic, ally, first-hit, etc. Shown live in-game on the battle screen — copy that number in.' },
-          { term: 'Roll variance', desc: 'Real hits vary ±1-2% from this average due to RNG damage roll.' },
+          { term: 'Formula', desc: 'damage = atk × (1 + mil rank%) × (1 + battle bonus%) × outcome-weighting (crit / normal / miss).' },
+          { term: 'Mil rank', desc: `+${fmt(rankPct, 1)}% (rank ${p.militaryRank ?? '?'}). Multiplicative on atk.` },
+          { term: 'Battle bonus', desc: 'Signed sum of orders, patriotic, ally, first-hit (positive) and region maluses (negative). Maluses use the same formula with a minus sign — e.g. -25% × atk × 1.X = the actual damage. Verified May 2026 against a -25% defender hit.' },
+          { term: 'Roll variance', desc: 'Server applies a small RNG roll (~±3% observed on a single 173-atk knife hit). The number shown is the central expectation; real hits land in the range below.' },
+          { term: 'Miss multiplier', desc: 'Misses still deal damage but reduced. Tooltip says half; not yet pinned precisely from data.' },
         ], 'Damage formula')}
-        <span class="right">${fmtInt(expDmg)} dmg${battleBonusPct > 0 ? ` <span style="color: var(--dimmer); font-weight: 400;">(${fmtInt(baseDmgNoBonus)} without bonuses)</span>` : ''}</span>
+        <span class="right">${fmtInt(expDmg)} dmg <span style="color: var(--dimmer); font-weight: 400;">(${fmtInt(rangeLow)}–${fmtInt(rangeHigh)} range${battleBonusPct !== 0 ? `, ${fmtInt(baseDmgNoBonus)} no bonuses` : ''})</span></span>
       </div>
       <div class="plan-control" style="margin-bottom: 0.7rem;">
         <label>Battle bonus
-          <input id="battle-bonus-input" type="number" min="0" max="200" step="1" value="${battleBonusPct}">
+          <input id="battle-bonus-input" type="number" min="-100" max="200" step="1" value="${battleBonusPct}">
           <span class="muted">%</span>
         </label>
-        <span class="muted" style="font-size: 0.78rem;">Set this to the aggregate % shown in-game on the battle screen (country/MU orders, ally, patriotic, first-hit, etc.). 0 = peacetime preview.</span>
+        <span class="muted" style="font-size: 0.78rem;">The signed % shown on the battle screen (positive = orders/patriotic/ally/etc., negative = region maluses like -25% for lost-attacking-region). 0 = peacetime preview.</span>
       </div>
     </div>
     <div class="section">
@@ -2748,7 +2755,7 @@ async function load(username) {
     renderPlayer(data);
     const newQs = new URLSearchParams();
     newQs.set('u', username);
-    if (battleBonusPct > 0) newQs.set('bb', String(battleBonusPct));
+    if (battleBonusPct !== 0) newQs.set('bb', String(battleBonusPct));
     if (DEBUG) newQs.set('debug', '1');
     history.replaceState(null, '', location.pathname + '?' + newQs.toString());
     setStatus('ok', `Loaded ${data.user?.username || username}.`);
@@ -2776,4 +2783,4 @@ if (initialU) {
 if (DEBUG) console.log('Debug mode on.');
 </script>
 </body>
-</html> 
+</html>

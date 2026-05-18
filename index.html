@@ -2340,7 +2340,7 @@ function renderTargetBuild(p, data) {
     });
   });
 
-  $$('#target-content .target-box-head').forEach(h => {
+  $('#target-content .target-box-head').forEach(h => {
     h.addEventListener('click', () => {
       const box = h.closest('.target-box');
       const id = box.dataset.box;
